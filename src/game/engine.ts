@@ -22,11 +22,12 @@ export function moduleScale(mod: ModuleDef): number {
 
 // ---------------------------------------------------------------- learn tour
 
-/** Containers largest-first, each followed by its atoms; orphan atoms last. */
+/**
+ * Containers in authored order (the module file tells the story), each
+ * followed by its atoms; orphan atoms last.
+ */
 export function buildLearnTour(mod: ModuleDef): Item[] {
-  const containers = mod.items
-    .filter(i => i.kind === 'container')
-    .sort((a, b) => (b.w ?? 0) * (b.h ?? 0) - (a.w ?? 0) * (a.h ?? 0))
+  const containers = mod.items.filter(i => i.kind === 'container')
   const tour: Item[] = []
   for (const c of containers) {
     tour.push(c)

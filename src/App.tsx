@@ -22,7 +22,7 @@ export function navigate(to: string) {
   window.location.hash = to
 }
 
-const MODES: Mode[] = ['learn', 'drill', 'sprint', 'review']
+const MODES: Mode[] = ['learn', 'explore', 'drill', 'sprint', 'review']
 
 export default function App() {
   const hash = useHash()

@@ -11,7 +11,7 @@ import { getProgress, recordResult } from '../lib/progress'
 declare global {
   interface Window {
     /** deterministic hook: what the current question wants (smoke tests) */
-    __cmTarget?: { id: string; x: number; y: number; kind: string } | null
+    __cmTarget?: { id: string; x: number; y: number; kind: string; lod?: number } | null
     __cmPhase?: string
   }
 }
@@ -38,6 +38,12 @@ export default function Play({ mod, mode }: Props) {
 
   // learn
   const [tourIdx, setTourIdx] = useState(0)
+
+  // explore
+  const [selId, setSelId] = useState<string | null>(null)
+
+  // "zoom in" nudge when the current target is hidden behind a zoom threshold
+  const [zoomHint, setZoomHint] = useState(false)
 
   // quiz (drill / sprint / review)
   const [qNum, setQNum] = useState(1)
@@ -78,7 +84,7 @@ export default function Play({ mod, mode }: Props) {
 
   // first prompt / sprint clock
   useEffect(() => {
-    if (mode === 'learn') return
+    if (mode === 'learn' || mode === 'explore') return
     if (mode === 'review' && reviewQueue.length === 0) {
       setDone(true)
       return
@@ -102,13 +108,28 @@ export default function Play({ mod, mode }: Props) {
   // deterministic hooks for the smoke harness
   useEffect(() => {
     const item = mode === 'learn' ? tour[tourIdx] : prompt?.item
-    window.__cmTarget = item ? { id: item.id, x: item.x, y: item.y, kind: item.kind } : null
+    window.__cmTarget = item
+      ? { id: item.id, x: item.x, y: item.y, kind: item.kind, lod: item.lod }
+      : null
     window.__cmPhase = done ? 'done' : verdict ? 'verdict' : 'ask'
     return () => {
       window.__cmTarget = null
       window.__cmPhase = undefined
     }
   }, [mode, tour, tourIdx, prompt, verdict, done])
+
+  // while asking for an item hidden behind a zoom threshold, nudge the player
+  useEffect(() => {
+    const lod = prompt?.item.lod
+    if (!lod || verdict || done) {
+      setZoomHint(false)
+      return
+    }
+    const t = window.setInterval(() => {
+      setZoomHint((window.__cmRelK ?? 1) < lod)
+    }, 300)
+    return () => window.clearInterval(t)
+  }, [prompt, verdict, done])
 
   useEffect(() => () => {
     if (autoNextRef.current !== null) window.clearTimeout(autoNextRef.current)
@@ -164,6 +185,40 @@ export default function Play({ mod, mode }: Props) {
 
   const nCorrect = answered.filter(a => a.correct).length
   const missed = [...new Set(answered.filter(a => !a.correct).map(a => a.item.name))]
+
+  // ---------------------------------------------------------------- explore
+  if (mode === 'explore') {
+    const sel = selId ? mod.items.find(i => i.id === selId) : undefined
+    const exploreMarks: Record<string, Mark> = sel ? { [sel.id]: 'focus' } : {}
+    return (
+      <div className="play">
+        <TopBar mod={mod} label="Explore" right="" />
+        <ConceptMap
+          mod={mod}
+          marks={exploreMarks}
+          showAtomLabels
+          interactive
+          onTap={(_world, resolved) => setSelId(resolved?.id ?? null)}
+        />
+        <div className="panel" data-testid="explore-card">
+          {sel ? (
+            <>
+              <div className="panel-head">
+                <span className={`kind-badge ${sel.kind}`}>{sel.kind === 'container' ? 'region' : 'component'}</span>
+                <h3>{sel.name}</h3>
+              </div>
+              <p className="note">{sel.note}</p>
+            </>
+          ) : (
+            <p className="note">
+              Tap any component to see what it does. Pinch or scroll to zoom — smaller parts
+              appear as you get closer. ⛶ resets the view.
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   // ------------------------------------------------------------------ learn
   if (mode === 'learn') {
@@ -261,15 +316,23 @@ export default function Play({ mod, mode }: Props) {
           {streak >= 2 && <span className="streak">×{streak}</span>}
         </div>
       </div>
-      <ConceptMap
-        mod={mod}
-        marks={marks}
-        showAtomLabels={false}
-        prefer={prompt?.item.kind}
-        focusId={focusId}
-        interactive={!verdict}
-        onTap={onTap}
-      />
+      <div className="map-stack">
+        <ConceptMap
+          mod={mod}
+          marks={marks}
+          showAtomLabels={false}
+          prefer={prompt?.item.kind}
+          focusId={focusId}
+          resetSignal={qNum}
+          interactive={!verdict}
+          onTap={onTap}
+        />
+        {zoomHint && (
+          <div className="hud-hint" data-testid="zoom-hint">
+            It’s a small component — zoom in and it will appear.
+          </div>
+        )}
+      </div>
       {verdict && (
         <div className={`panel verdict ${verdict.correct ? 'good' : 'bad'}`} data-testid="verdict">
           <div className="panel-head">

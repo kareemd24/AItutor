@@ -150,6 +150,43 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .map-wrap { flex: 1; position: relative; min-height: 0; }
 .map-canvas { display: block; touch-action: none; cursor: crosshair; }
 
+.fit-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(19, 26, 46, 0.85);
+  color: var(--muted);
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+}
+.fit-btn:hover { color: var(--text); border-color: var(--muted); }
+
+/* floats over the map — must never shift the canvas layout */
+.map-stack { flex: 1; min-height: 0; position: relative; display: flex; }
+.map-stack .map-wrap { flex: 1; }
+.hud-hint {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(19, 26, 46, 0.92);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: var(--amber);
+  font-size: 13px;
+  pointer-events: none;
+}
+
 /* bottom panels: verdicts, learn cards, results */
 .panel {
   background: var(--panel);

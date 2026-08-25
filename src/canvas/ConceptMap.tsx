@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { Item, ItemKind, ModuleDef } from '../types'
+import type { Item, ItemKind, ModuleDef, Shape } from '../types'
 
 export type Mark = 'focus' | 'correct' | 'wrong'
 
@@ -12,6 +12,8 @@ interface Props {
   prefer?: ItemKind
   /** item to animate the camera toward */
   focusId?: string | null
+  /** when this number changes, the camera animates back to the fitted view */
+  resetSignal?: number
   interactive: boolean
   onTap?: (world: { x: number; y: number }, resolved: Item | null) => void
 }
@@ -32,6 +34,12 @@ declare global {
     __cmProject?: (x: number, y: number) => [number, number]
     __cmAnimating?: boolean
     __cmModule?: string
+    /** zoom relative to fit — 1 means fitted, 2 means 2× in */
+    __cmRelK?: number
+    /** input diagnostics for the smoke harness */
+    __cmTaps?: { downs: number; ups: number; taps: number; last: string }
+    /** deterministic camera control for tests: center on a world point at relK */
+    __cmFocusWorld?: (x: number, y: number, relK: number) => void
   }
 }
 
@@ -43,6 +51,8 @@ export default function ConceptMap(props: Props) {
   const camRef = useRef<Cam>({ k: 1, tx: 0, ty: 0 })
   const camTargetRef = useRef<Cam | null>(null)
   const lastFocusRef = useRef<string | null | undefined>(undefined)
+  const lastResetRef = useRef<number | undefined>(undefined)
+  const fitRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -79,6 +89,20 @@ export default function ConceptMap(props: Props) {
     }
 
     function resize() {
+      // A resize (panel opening/closing, rotation) must not reset the view:
+      // preserve each camera's world center and zoom-relative-to-fit.
+      const hadSize = cssW > 0 && cssH > 0
+      const oldFitK = hadSize ? fitCam().k : 1
+      const oldW = cssW
+      const oldH = cssH
+      const capture = (c: Cam) => ({
+        rel: c.k / oldFitK,
+        wx: (oldW / 2 - c.tx) / c.k,
+        wy: (oldH / 2 - c.ty) / c.k,
+      })
+      const saved = hadSize ? capture(camRef.current) : null
+      const savedTarget = hadSize && camTargetRef.current ? capture(camTargetRef.current) : null
+
       const rect = canvas!.parentElement!.getBoundingClientRect()
       cssW = rect.width
       cssH = rect.height
@@ -87,8 +111,13 @@ export default function ConceptMap(props: Props) {
       canvas!.height = Math.max(1, Math.round(cssH * dpr))
       canvas!.style.width = `${cssW}px`
       canvas!.style.height = `${cssH}px`
-      camRef.current = fitCam()
-      camTargetRef.current = null
+
+      const restore = (s: { rel: number; wx: number; wy: number }): Cam => {
+        const k = fitCam().k * s.rel
+        return { k, tx: cssW / 2 - s.wx * k, ty: cssH / 2 - s.wy * k }
+      }
+      camRef.current = saved ? restore(saved) : fitCam()
+      camTargetRef.current = savedTarget ? restore(savedTarget) : null
     }
 
     const ro = new ResizeObserver(resize)
@@ -102,7 +131,7 @@ export default function ConceptMap(props: Props) {
         return
       }
       const fit = fitCam()
-      let bx: number, by: number, bw: number, bh: number
+      let bw: number, bh: number
       if (item.kind === 'container') {
         bw = (item.w ?? 200) + 120
         bh = (item.h ?? 200) + 120
@@ -110,15 +139,15 @@ export default function ConceptMap(props: Props) {
         bw = 420
         bh = 300
       }
-      bx = item.x - bw / 2
-      by = item.y - bh / 2
+      const lod = item.lod ?? 1
       let k = Math.min(cssW / bw, cssH / bh)
-      k = Math.min(k, fit.k * 2.4)
-      k = Math.max(k, fit.k)
+      k = Math.min(k, fit.k * Math.max(2.4, lod * 1.6))
+      // an item hidden behind a zoom threshold must be zoomed past it
+      k = Math.max(k, fit.k, fit.k * lod * 1.15)
       camTargetRef.current = {
         k,
-        tx: cssW / 2 - (bx + bw / 2) * k,
-        ty: cssH / 2 - (by + bh / 2) * k,
+        tx: cssW / 2 - item.x * k,
+        ty: cssH / 2 - item.y * k,
       }
     }
 
@@ -142,14 +171,18 @@ export default function ConceptMap(props: Props) {
     function resolveTap(sx: number, sy: number, prefer?: ItemKind): Item | null {
       const items = propsRef.current.mod.items
       const world = invert(sx, sy)
+      const relK = camRef.current.k / fitCam().k
 
       const nearestAtomWithin = (rPx: number): Item | null => {
         let best: Item | null = null
         let bestD = Infinity
         for (const it of items) {
           if (it.kind !== 'atom') continue
+          if (it.lod !== undefined && relK < it.lod) continue // hidden until zoomed
           const [ax, ay] = project(it.x, it.y)
-          const d = Math.hypot(ax - sx, ay - sy)
+          // atoms with big art accept taps anywhere over the art (hitR)
+          const raw = Math.hypot(ax - sx, ay - sy)
+          const d = it.hitR ? Math.max(0, raw - it.hitR * camRef.current.k) : raw
           if (d <= rPx && d < bestD) {
             best = it
             bestD = d
@@ -213,10 +246,11 @@ export default function ConceptMap(props: Props) {
       return { x: e.clientX - rect.left, y: e.clientY - rect.top }
     }
 
+    const taps = { downs: 0, ups: 0, taps: 0, last: '' }
+    window.__cmTaps = taps
+
     function onPointerDown(e: PointerEvent) {
-      if (!propsRef.current.interactive && pointers.size === 0) {
-        // still allow pan/zoom while non-interactive
-      }
+      taps.downs++
       canvas!.setPointerCapture(e.pointerId)
       const p = toLocal(e)
       if (pointers.size === 0) {
@@ -264,13 +298,18 @@ export default function ConceptMap(props: Props) {
 
     function onPointerUp(e: PointerEvent) {
       if (!pointers.has(e.pointerId)) return
+      taps.ups++
       const p = toLocal(e)
       pointers.delete(e.pointerId)
       if (pointers.size === 0) {
         // only a single finger that never dragged is a tap; a pinch never is
         if (!gesture.dragged && gesture.maxPointers === 1 && propsRef.current.interactive) {
           const resolved = resolveTap(p.x, p.y, propsRef.current.prefer)
+          taps.taps++
+          taps.last = `(${Math.round(p.x)},${Math.round(p.y)})→${resolved?.id ?? 'null'}`
           propsRef.current.onTap?.(invert(p.x, p.y), resolved)
+        } else {
+          taps.last = `discarded drag=${gesture.dragged} maxP=${gesture.maxPointers} interactive=${propsRef.current.interactive}`
         }
         gesture = { dragged: false, maxPointers: 0, moved: 0, lastDist: 0, lastMid: p }
       } else if (pointers.size === 1) {
@@ -299,21 +338,99 @@ export default function ConceptMap(props: Props) {
     canvas.addEventListener('pointercancel', onPointerUp)
     canvas.addEventListener('wheel', onWheel, { passive: false })
 
-    // ------------------------------------------------------------ test hook
+    // ------------------------------------------------------------ test hooks
     window.__cmProject = (x: number, y: number) => {
       const rect = canvas!.getBoundingClientRect()
       const [sx, sy] = project(x, y)
       return [rect.left + sx, rect.top + sy]
     }
+    window.__cmFocusWorld = (x: number, y: number, relK: number) => {
+      const fit = fitCam()
+      const k = Math.min(fit.k * relK, fit.k * 8)
+      camTargetRef.current = { k, tx: cssW / 2 - x * k, ty: cssH / 2 - y * k }
+    }
     window.__cmModule = propsRef.current.mod.id
+    fitRef.current = () => { camTargetRef.current = fitCam() }
 
     // ---------------------------------------------------------------- draw
+    function drawShape(s: Shape, relK: number) {
+      if (s.lod !== undefined && relK < s.lod) return
+      if (s.lodMax !== undefined && relK > s.lodMax) return
+      const k = camRef.current.k
+      if (s.t === 'rect') {
+        const [sx, sy] = project(s.x, s.y)
+        ctx!.beginPath()
+        ctx!.roundRect(sx, sy, s.w * k, s.h * k, (s.r ?? 0) * k)
+        if (s.f) { ctx!.fillStyle = s.f; ctx!.fill() }
+        if (s.s) { ctx!.strokeStyle = s.s; ctx!.lineWidth = s.lw ?? 1; ctx!.stroke() }
+      } else if (s.t === 'circle') {
+        const [sx, sy] = project(s.cx, s.cy)
+        ctx!.beginPath()
+        ctx!.arc(sx, sy, s.r * k, 0, Math.PI * 2)
+        if (s.f) { ctx!.fillStyle = s.f; ctx!.fill() }
+        if (s.s) { ctx!.strokeStyle = s.s; ctx!.lineWidth = s.lw ?? 1; ctx!.stroke() }
+      } else if (s.t === 'line') {
+        ctx!.beginPath()
+        for (let i = 0; i < s.pts.length; i += 2) {
+          const [sx, sy] = project(s.pts[i], s.pts[i + 1])
+          if (i === 0) ctx!.moveTo(sx, sy)
+          else ctx!.lineTo(sx, sy)
+        }
+        ctx!.strokeStyle = s.s ?? 'rgba(226,232,240,0.5)'
+        ctx!.lineWidth = s.lw ?? 1
+        ctx!.setLineDash(s.dash ?? [])
+        ctx!.stroke()
+        ctx!.setLineDash([])
+      } else if (s.t === 'text') {
+        const px = (s.size ?? 12) * k
+        if (px < 6) return
+        const [sx, sy] = project(s.x, s.y)
+        ctx!.font = `500 ${px}px system-ui, sans-serif`
+        ctx!.textAlign = 'left'
+        ctx!.textBaseline = 'middle'
+        ctx!.fillStyle = s.f ?? 'rgba(148,163,184,0.7)'
+        ctx!.fillText(s.text, sx, sy)
+      }
+    }
+
+    // flows: animated particles along polylines. Precompute segment lengths.
+    const flowGeom = (propsRef.current.mod.flows ?? []).map(f => {
+      const segs: { x1: number; y1: number; dx: number; dy: number; len: number; start: number }[] = []
+      let total = 0
+      for (let i = 0; i + 3 < f.pts.length; i += 2) {
+        const [x1, y1, x2, y2] = [f.pts[i], f.pts[i + 1], f.pts[i + 2], f.pts[i + 3]]
+        const len = Math.hypot(x2 - x1, y2 - y1)
+        segs.push({ x1, y1, dx: x2 - x1, dy: y2 - y1, len, start: total })
+        total += len
+      }
+      return { f, segs, total }
+    })
+
+    function drawFlows(now: number) {
+      const k = camRef.current.k
+      for (const { f, segs, total } of flowGeom) {
+        if (total <= 0) continue
+        for (let i = 0; i < f.n; i++) {
+          const offset = ((now / 1000) * f.speed + (i * total) / f.n) % total
+          const seg = segs.find(sg => offset - sg.start <= sg.len) ?? segs[segs.length - 1]
+          const u = Math.min(1, (offset - seg.start) / (seg.len || 1))
+          const [sx, sy] = project(seg.x1 + seg.dx * u, seg.y1 + seg.dy * u)
+          ctx!.beginPath()
+          ctx!.arc(sx, sy, Math.max(1.5, (f.size ?? 2.5) * Math.min(k, 2)), 0, Math.PI * 2)
+          ctx!.fillStyle = f.color
+          ctx!.fill()
+        }
+      }
+    }
+
     function drawFrame(now: number) {
       const { mod, marks, showAtomLabels } = propsRef.current
       const dpr = window.devicePixelRatio || 1
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx!.clearRect(0, 0, cssW, cssH)
       const k = camRef.current.k
+      const relK = k / fitCam().k
+      window.__cmRelK = relK
 
       // faint world grid for spatial texture
       ctx!.strokeStyle = 'rgba(148,163,184,0.07)'
@@ -330,6 +447,9 @@ export default function ConceptMap(props: Props) {
       }
 
       const pulse = 0.5 + 0.5 * Math.sin(now / 220)
+
+      // module backdrop illustration (leader lines, annotations)
+      for (const s of mod.art ?? []) drawShape(s, relK)
 
       // containers first
       for (const it of mod.items) {
@@ -354,6 +474,8 @@ export default function ConceptMap(props: Props) {
           : mark === 'focus' ? `hsla(${h},${s}%,72%,${0.55 + 0.45 * pulse})`
           : `hsla(${h},${s}%,65%,0.45)`
         ctx!.stroke()
+        // the item's own illustration, on top of its region fill
+        for (const shape of it.art ?? []) drawShape(shape, relK)
         // region label, always visible, top-left inside
         ctx!.font = '600 12px system-ui, sans-serif'
         ctx!.textAlign = 'left'
@@ -362,24 +484,32 @@ export default function ConceptMap(props: Props) {
         ctx!.fillText(it.name.toUpperCase(), sx + 10, sy + 8, Math.max(40, sw - 20))
       }
 
-      // atoms on top; marked atoms drawn last
-      const atoms = mod.items.filter(i => i.kind === 'atom')
+      // animated flows ride above the artwork, below the atoms
+      drawFlows(now)
+
+      // atoms on top; marked atoms drawn last; LOD-hidden atoms not at all
+      const atoms = mod.items.filter(
+        i => i.kind === 'atom' && (i.lod === undefined || relK >= i.lod),
+      )
       atoms.sort((a, b) => (marks[a.id] ? 1 : 0) - (marks[b.id] ? 1 : 0))
       for (const it of atoms) {
         const { h, s } = hueOf(it)
         const [sx, sy] = project(it.x, it.y)
         const mark = marks[it.id]
         const R = 7
+        for (const shape of it.art ?? []) drawShape(shape, relK)
+        // hitR atoms get rings sized to their artwork, not their dot
+        const ringBase = Math.max(R, (it.hitR ?? 0) * k * 0.8)
         if (mark === 'focus') {
           ctx!.beginPath()
-          ctx!.arc(sx, sy, R + 5 + 5 * pulse, 0, Math.PI * 2)
+          ctx!.arc(sx, sy, ringBase + 5 + 5 * pulse, 0, Math.PI * 2)
           ctx!.strokeStyle = 'rgba(251,191,36,0.9)'
           ctx!.lineWidth = 3
           ctx!.stroke()
         }
         if (mark === 'correct' || mark === 'wrong') {
           ctx!.beginPath()
-          ctx!.arc(sx, sy, R + 6, 0, Math.PI * 2)
+          ctx!.arc(sx, sy, ringBase + 6, 0, Math.PI * 2)
           ctx!.strokeStyle = mark === 'correct' ? 'rgba(52,211,153,0.95)' : 'rgba(251,113,133,0.95)'
           ctx!.lineWidth = 3.5
           ctx!.stroke()
@@ -413,6 +543,12 @@ export default function ConceptMap(props: Props) {
 
     function tick(now: number) {
       if (disposed) return
+      // an incremented reset signal (each new question) refits the view
+      const reset = propsRef.current.resetSignal
+      if (reset !== undefined && reset !== lastResetRef.current) {
+        lastResetRef.current = reset
+        camTargetRef.current = fitCam()
+      }
       // camera focus changes arrive via props
       const want = propsRef.current.focusId
       if (want !== lastFocusRef.current) {
@@ -458,7 +594,9 @@ export default function ConceptMap(props: Props) {
       canvas.removeEventListener('pointercancel', onPointerUp)
       canvas.removeEventListener('wheel', onWheel)
       delete window.__cmProject
+      delete window.__cmFocusWorld
       delete window.__cmModule
+      delete window.__cmRelK
       window.__cmAnimating = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -467,6 +605,14 @@ export default function ConceptMap(props: Props) {
   return (
     <div className="map-wrap">
       <canvas ref={canvasRef} className="map-canvas" data-testid="concept-map" />
+      <button
+        className="fit-btn"
+        aria-label="Fit view"
+        title="Fit view"
+        onClick={() => fitRef.current?.()}
+      >
+        ⛶
+      </button>
     </div>
   )
 }

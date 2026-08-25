@@ -51,10 +51,21 @@ function fail(msg) {
 }
 
 async function settle(page) {
-  // never measure while the camera is mid-animation (playbook incident #9)
-  await page.waitForFunction(() => window.__cmAnimating !== true, null, { timeout: 5000 })
-  await page.waitForTimeout(120)
-  await page.waitForFunction(() => window.__cmAnimating !== true, null, { timeout: 5000 })
+  // never measure while the camera is mid-animation (playbook incident #9),
+  // and never while layout is still shifting the canvas under the pointer
+  const rectOf = () => page.evaluate(() => {
+    const r = document.querySelector('[data-testid="concept-map"]').getBoundingClientRect()
+    return `${r.left},${r.top},${r.width},${r.height}`
+  })
+  for (let i = 0; i < 40; i++) {
+    await page.waitForFunction(() => window.__cmAnimating !== true, null, { timeout: 5000 })
+    const before = await rectOf()
+    await page.waitForTimeout(120)
+    const stillCalm = await page.evaluate(() => window.__cmAnimating !== true)
+    const after = await rectOf()
+    if (stillCalm && before === after) return
+  }
+  fail('canvas never settled (camera or layout kept moving)')
 }
 
 async function currentTarget(page) {
@@ -95,9 +106,30 @@ async function checkOverflow(page, label) {
 
 async function answerQuestion(page, { wrong = false } = {}) {
   const t = await currentTarget(page)
+  // targets behind a zoom threshold must be zoomed to first, like a player
+  // would; the new-question refit can race the zoom, so verify it took
+  if (!wrong && t.lod) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await page.evaluate(([x, y, rel]) => window.__cmFocusWorld(x, y, rel), [t.x, t.y, t.lod * 1.3])
+      await settle(page)
+      const relK = await page.evaluate(() => window.__cmRelK)
+      if (relK >= t.lod) break
+      if (attempt === 4) fail(`could not hold zoom for ${t.id}: relK ${relK} < lod ${t.lod}`)
+    }
+  }
   const point = wrong ? farCorner(t) : { x: t.x, y: t.y }
   await tapWorld(page, point.x, point.y)
-  await page.waitForSelector('[data-testid="verdict"]', { timeout: 5000 })
+  try {
+    await page.waitForSelector('[data-testid="verdict"]', { timeout: 5000 })
+  } catch (e) {
+    const diag = await page.evaluate(() => JSON.stringify({
+      taps: window.__cmTaps, relK: window.__cmRelK, target: window.__cmTarget,
+      phase: window.__cmPhase,
+      rect: document.querySelector('[data-testid="concept-map"]')?.getBoundingClientRect(),
+    }))
+    console.error(`DIAG no-verdict for ${t.id}: ${diag}`)
+    throw e
+  }
   const cls = await page.getAttribute('[data-testid="verdict"]', 'class')
   const good = cls.includes('good')
   if (wrong && good) fail(`deliberate miss on ${t.id} was graded correct — forgiveness has no edges`)
@@ -130,18 +162,19 @@ async function run() {
     // ---- 1. home: all modules listed --------------------------------------
     await page.goto(base, { waitUntil: 'networkidle' })
     const cards = await page.locator('.module-card').count()
-    if (cards !== 6) fail(`expected 6 module cards, found ${cards}`)
+    if (cards !== 8) fail(`expected 8 module cards, found ${cards}`)
     await shot(page, 'home')
 
     // ---- 2. module setup --------------------------------------------------
     await page.click('.module-card:first-child')
     await page.waitForSelector('.mode-card')
     const modes = await page.locator('.mode-card').count()
-    if (modes !== 4) fail(`expected 4 mode cards, found ${modes}`)
+    if (modes !== 5) fail(`expected 5 mode cards, found ${modes}`)
     await shot(page, 'setup')
 
     // ---- 3. learn tour, full walk ----------------------------------------
-    await page.click('a[href="#/m/transformer/learn"]')
+    await page.goto(`${base}#/m/transformer/learn`)
+    await page.reload({ waitUntil: 'networkidle' })
     await page.waitForSelector('[data-testid="learn-card"]')
     const seen = new Set()
     for (let i = 0; i < 60; i++) {
@@ -210,6 +243,43 @@ async function run() {
     await page.waitForSelector('[data-testid="verdict"]', { state: 'detached', timeout: 4000 })
     await answerQuestion(page)
     await shot(page, 'sprint')
+
+    // ---- 7b. rack explore: tap-to-inspect + LOD zoom reveal ---------------
+    await page.goto(`${base}#/m/rack/explore`)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForSelector('[data-testid="explore-card"]')
+    await tapWorld(page, 200, 91) // top-of-rack switch
+    let card = await page.textContent('[data-testid="explore-card"]')
+    if (!card.includes('Top-of-rack')) fail(`explore tap on ToR switch showed: ${card.slice(0, 60)}`)
+    // at fit zoom the GPU die is LOD-hidden: tapping its spot must select the module, not the die
+    await tapWorld(page, 686, 444)
+    card = await page.textContent('[data-testid="explore-card"]')
+    if (card.includes('GPU die')) fail('LOD-hidden die was selectable at fit zoom')
+    if (!card.includes('GPU module')) fail(`expected GPU module container, got: ${card.slice(0, 60)}`)
+    // zoom in — now the die is there
+    await page.evaluate(() => window.__cmFocusWorld(686, 444, 2))
+    await tapWorld(page, 686, 444)
+    card = await page.textContent('[data-testid="explore-card"]')
+    if (!card.includes('GPU die')) fail(`zoomed explore tap missed the die: ${card.slice(0, 60)}`)
+    await shot(page, 'rack-explore-zoom')
+
+    // ---- 7c. rack drill: LOD targets answered by zooming ------------------
+    await page.goto(`${base}#/m/rack/drill`)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForSelector('[data-testid="prompt"]')
+    for (let q = 0; q < 5; q++) {
+      if (await page.locator('[data-testid="results"]').count() > 0) break
+      await answerQuestion(page)
+      await page.locator('[data-testid="next-btn"]').click()
+      await page.waitForTimeout(80)
+    }
+    await shot(page, 'rack-drill')
+
+    // ---- 7d. token journey renders with its flows -------------------------
+    await page.goto(`${base}#/m/tokenpath/learn`)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForSelector('[data-testid="learn-card"]')
+    await shot(page, 'tokenpath-learn')
 
     // ---- 8. phone viewport: no overflow, drill still playable -------------
     const phone = await context.browser().newContext({

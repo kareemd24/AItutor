@@ -31,6 +31,10 @@ export default function ModuleSetup({ mod }: { mod: ModuleDef }) {
           <h3>Learn</h3>
           <p>A guided tour, no score. Builds the mental picture region by region.</p>
         </a>
+        <a className="mode-card" href={`#/m/${mod.id}/explore`}>
+          <h3>Explore</h3>
+          <p>Free roam — tap any component to see what it does, zoom in for the fine detail.</p>
+        </a>
         <a className="mode-card" href={`#/m/${mod.id}/drill`}>
           <h3>Drill</h3>
           <p>Timed prompts, weighted toward what you know least. This is the game.</p>

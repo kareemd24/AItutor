@@ -1,4 +1,6 @@
 import type { ModuleDef } from '../types'
+import { tokenpath } from './tokenpath'
+import { rack } from './rack'
 import { transformer } from './transformer'
 import { inference } from './inference'
 import { training } from './training'
@@ -7,6 +9,8 @@ import { memory } from './memory'
 import { datacenter } from './datacenter'
 
 export const MODULES: ModuleDef[] = [
+  tokenpath,
+  rack,
   transformer,
   inference,
   training,

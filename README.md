@@ -9,6 +9,8 @@ for hand-designed concept layouts, everything downstream kept.
 
 | Module | What you learn |
 |---|---|
+| **The Journey of a Token** | The whole inference pipeline as one animated flow: tokenize → prefill (parallel particles, writing the KV cache) → the decode loop (one particle per lap, reading the cache) → streaming out |
+| **Inside a GPU Rack** | An illustrated rack — ToR switch, power shelves, busbar, CDU — with exploded views of a compute tray (CPUs, NICs, NVSwitches) and the GPU module itself (die, HBM, VRM, cold plate); fine detail appears as you zoom |
 | **The Transformer, Block by Block** | Tokenizer → embeddings → attention (Q/K/V, scores, KV cache, GQA) → FFN (up/gate/down, MoE) → output head, hung on the residual spine |
 | **The Inference Stack** | Prefill vs decode, TTFT vs inter-token latency, speculative decoding (draft → verify → acceptance), continuous batching, PagedAttention, FlashAttention, quantization |
 | **The Training Pipeline** | Pretraining (data, loss, AdamW, scaling laws) → post-training (SFT, RLHF, reward models, PPO, DPO, RLVR, Constitutional AI, distillation) over distributed-training machinery |
@@ -22,10 +24,18 @@ Each module is a **designed 2D layout** where placement is curation — related
 concepts sit near each other, because partial credit decays with distance.
 **Regions** (containers) are tapped inside; **concepts** (atoms) are tapped near.
 
-Four modes over the same items:
+Illustrated modules add three more layers: **vector art** drawn in world space
+(the rack is drawn as a rack), **level-of-detail** (ports, dies and HBM stacks
+appear only past a zoom threshold — drill targets behind a threshold show a
+"zoom in" nudge), and **animated flows** (particles moving along paths:
+coolant loops, token streams).
+
+Five modes over the same items:
 
 - **Learn** — guided tour, no score. Region by region, with one hand-written
   sentence per item: the hook you hang the concept on.
+- **Explore** — free roam: tap any component to see what it does, zoom in for
+  the fine detail.
 - **Drill** — the game. Timed prompts weighted toward what you know least,
   including "find the one that…" role questions.
 - **Sprint** — one 60-second clock, endless prompts, for fluency.
