@@ -3,11 +3,36 @@ import type { ModuleDef } from '../types'
 // Layout: the request's timeline runs along the top (prefill → decode),
 // speculative decoding hangs off decode's output, and the serving-level
 // optimizations sit underneath the whole pipeline.
+const amber = (a: number) => `hsla(38,95%,60%,${a})`
+const emerald = (a: number) => `hsla(152,65%,55%,${a})`
+const sky = (a: number) => `hsla(199,90%,65%,${a})`
+const rose = (a: number) => `hsla(340,75%,65%,${a})`
+const slate = (a: number) => `hsla(220,20%,70%,${a})`
+
 export const inference: ModuleDef = {
   id: 'inference',
   title: 'The Inference Stack',
   tagline: 'What actually happens between hitting enter and tokens streaming back.',
   world: { w: 1000, h: 620 },
+  art: [
+    // speculative decoding racetrack: draft lane vs verify lane
+    { t: 'line', pts: [745, 445, 955, 445], s: sky(0.3), lw: 1 },
+    { t: 'line', pts: [745, 465, 955, 465], s: emerald(0.3), lw: 1 },
+    { t: 'text', x: 748, y: 435, text: 'draft: guess…', size: 7, f: sky(0.7), lod: 1.25 },
+    { t: 'text', x: 748, y: 477, text: 'target: verify all at once', size: 7, f: emerald(0.7), lod: 1.25 },
+    { t: 'text', x: 862, y: 490, text: '✓ ✓ ✓ ✗', size: 9, f: emerald(0.8), lod: 1.25, mono: true },
+    // continuous batching: requests of different lengths sharing the GPU
+    ...Array.from({ length: 4 }, (_, i) => (
+      { t: 'rect' as const, x: 120, y: 378 + i * 9, w: [82, 44, 64, 28][i], h: 6, r: 2, f: [amber(0.5), sky(0.5), rose(0.45), emerald(0.5)][i], lod: 1.3 }
+    )),
+    { t: 'line', pts: [104, 405, 118, 399], s: emerald(0.7), lw: 1.3, lod: 1.3 },
+    { t: 'text', x: 96, y: 412, text: 'new request hops in', size: 6.5, f: slate(0.6), lod: 1.3 },
+  ],
+  flows: [
+    // draft tokens sprint ahead; the target model verifies in one slow pass
+    { pts: [745, 445, 955, 445], color: sky(0.85), n: 4, speed: 120, size: 2.2 },
+    { pts: [745, 465, 955, 465], color: emerald(0.9), n: 1, speed: 45, size: 3.5 },
+  ],
   items: [
     {
       id: 'inf.prefill', name: 'Prefill', kind: 'container', zone: 'The two phases',
@@ -42,7 +67,7 @@ export const inference: ModuleDef = {
     {
       id: 'inf.spec', name: 'Speculative decoding', kind: 'container', zone: 'Going faster',
       x: 850, y: 430, w: 260, h: 280,
-      note: 'The trick that breaks one-token-at-a-time: guess several tokens cheaply, then verify them all in a single pass of the big model.',
+      note: 'The trick that breaks one-token-at-a-time: a small model guesses several tokens, the big model verifies them in one pass — typically 2–3× faster with identical output.',
       role: 'lets a cheap model guess ahead and the big model verify the guesses',
     },
     { id: 'inf.draft', name: 'Draft model', kind: 'atom', parent: 'inf.spec', zone: 'Going faster', x: 790, y: 380,
@@ -60,12 +85,12 @@ export const inference: ModuleDef = {
     { id: 'inf.contbatch', name: 'Continuous batching', kind: 'atom', parent: 'inf.opt', zone: 'Going faster', x: 170, y: 415,
       note: 'New requests hop into the running batch the moment any sequence finishes, instead of waiting for the whole batch to drain.' },
     { id: 'inf.paged', name: 'PagedAttention', kind: 'atom', parent: 'inf.opt', zone: 'Going faster', x: 330, y: 415,
-      note: 'Manages KV cache like an OS manages virtual memory — fixed-size pages, no fragmentation, far more sequences per GPU.',
+      note: 'Manages KV cache like an OS manages virtual memory — fixed-size pages instead of big reserved slabs. Before vLLM introduced it, most KV memory was simply wasted to fragmentation.',
       role: 'manages the KV cache in pages the way an OS manages virtual memory' },
     { id: 'inf.flash', name: 'FlashAttention', kind: 'atom', parent: 'inf.opt', zone: 'Going faster', x: 490, y: 415,
-      note: 'Computes attention tile-by-tile inside on-chip SRAM, never writing the full attention matrix out to HBM.' },
+      note: 'Computes attention tile-by-tile inside on-chip SRAM, never writing the full attention matrix to HBM — 2–4× faster and memory that grows linearly, not quadratically.' },
     { id: 'inf.quant', name: 'Quantization (FP8/INT4)', kind: 'atom', parent: 'inf.opt', zone: 'Going faster', x: 250, y: 520,
-      note: 'Stores weights (and sometimes KV) in fewer bits — fewer bytes to stream makes bandwidth-bound decode directly faster.' },
+      note: 'Stores weights (and sometimes KV) in fewer bits — FP8 halves and INT4 quarters the bytes streamed per token, which is why it speeds up bandwidth-bound decode almost linearly.' },
     { id: 'inf.disagg', name: 'Disaggregated serving', kind: 'atom', parent: 'inf.opt', zone: 'Going faster', x: 420, y: 520,
       note: 'Runs prefill and decode on separate GPU pools, so the compute-heavy and bandwidth-heavy phases each get hardware shaped for them.' },
   ],

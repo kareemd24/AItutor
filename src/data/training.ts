@@ -2,11 +2,46 @@ import type { ModuleDef } from '../types'
 
 // Layout: the model's life story runs left → right (pretraining → post-training),
 // with the distributed-systems machinery that powers both spanning the bottom.
+const sky = (a: number) => `hsla(199,90%,65%,${a})`
+const amber = (a: number) => `hsla(38,95%,60%,${a})`
+const slate = (a: number) => `hsla(220,20%,70%,${a})`
+
 export const training: ModuleDef = {
   id: 'training',
   title: 'The Training Pipeline',
   tagline: 'From a pile of text to a helpful model: pretraining, post-training, and the machinery underneath.',
   world: { w: 1000, h: 620 },
+  art: [
+    // the only chart that matters for months: loss going down
+    { t: 'line', pts: [100, 105, 400, 105], s: slate(0.35), lw: 1 },
+    { t: 'line', pts: [100, 62, 100, 105], s: slate(0.35), lw: 1 },
+    { t: 'line', pts: [100, 68, 150, 80, 200, 88, 260, 94, 330, 99, 400, 102], s: sky(0.7), lw: 1.5 },
+    { t: 'text', x: 108, y: 66, text: 'loss, over trillions of tokens', size: 7.5, f: slate(0.6), lod: 1.15 },
+    // how one step is split: copies (DP), slices (TP), stages (PP), a ring (all-reduce)
+    ...Array.from({ length: 3 }, (_, i) => (
+      { t: 'rect' as const, x: 126 + i * 18, y: 500, w: 14, h: 20, r: 2, f: sky(0.35), s: sky(0.5), lw: 0.8, lod: 1.25 }
+    )),
+    { t: 'text', x: 150, y: 535, text: 'copies', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+    { t: 'rect', x: 246, y: 500, w: 48, h: 20, r: 2, s: sky(0.5), lw: 0.8, lod: 1.25 },
+    { t: 'line', pts: [262, 500, 262, 520], s: sky(0.5), lw: 0.8, lod: 1.25 },
+    { t: 'line', pts: [278, 500, 278, 520], s: sky(0.5), lw: 0.8, lod: 1.25 },
+    { t: 'text', x: 270, y: 535, text: 'sliced matrices', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+    ...Array.from({ length: 3 }, (_, i) => (
+      { t: 'rect' as const, x: 358 + i * 24, y: 500, w: 16, h: 20, r: 2, f: sky(0.2), s: sky(0.5), lw: 0.8, lod: 1.25 }
+    )),
+    { t: 'line', pts: [375, 510, 381, 510], s: slate(0.6), lw: 1, lod: 1.25 },
+    { t: 'line', pts: [399, 510, 405, 510], s: slate(0.6), lw: 1, lod: 1.25 },
+    { t: 'text', x: 390, y: 535, text: 'stages', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+    // the all-reduce ring
+    { t: 'circle', cx: 870, cy: 512, r: 17, s: amber(0.5), lw: 1.2, lod: 1.25 },
+    ...Array.from({ length: 4 }, (_, i) => (
+      { t: 'circle' as const, cx: 870 + 17 * Math.cos((i * Math.PI) / 2), cy: 512 + 17 * Math.sin((i * Math.PI) / 2), r: 3.5, f: amber(0.7), lod: 1.25 }
+    )),
+    { t: 'text', x: 870, y: 545, text: 'gradients circle the ring', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+  ],
+  flows: [
+    { pts: [887, 512, 870, 529, 853, 512, 870, 495, 887, 512], color: amber(0.8), n: 3, speed: 40, size: 2 },
+  ],
   items: [
     {
       id: 'tr.pre', name: 'Pretraining', kind: 'container', zone: 'The model’s life',
@@ -16,10 +51,10 @@ export const training: ModuleDef = {
     { id: 'tr.data', name: 'Data curation', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 150, y: 130,
       note: 'Filtering, deduplicating and mixing the corpus — quietly one of the biggest levers on final model quality.' },
     { id: 'tr.ntp', name: 'Next-token prediction', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 330, y: 130,
-      note: 'The whole objective: given everything so far, guess the next token. Every capability we observe is a side effect of doing this well.',
+      note: 'The whole objective: given everything so far, guess the next token — repeated over 10+ trillion tokens. Every capability we observe is a side effect of doing this well.',
       role: 'asks the model to guess the next token — pretraining’s only objective' },
     { id: 'tr.scaling', name: 'Scaling laws', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 240, y: 195,
-      note: 'Loss falls predictably with compute, data and parameters — the curves that tell you how big to build before you build it.' },
+      note: 'Loss falls predictably with compute, data and parameters — Chinchilla’s famous ratio: about 20 training tokens per parameter. The curves tell you how big to build before you build.' },
     { id: 'tr.xent', name: 'Cross-entropy loss', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 150, y: 265,
       note: 'The penalty for putting low probability on the true next token — the number the whole run exists to push down.' },
     { id: 'tr.adamw', name: 'AdamW', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 255, y: 265,

@@ -362,7 +362,13 @@ export default function ConceptMap(props: Props) {
         ctx!.beginPath()
         ctx!.roundRect(sx, sy, s.w * k, s.h * k, (s.r ?? 0) * k)
         if (s.f) { ctx!.fillStyle = s.f; ctx!.fill() }
-        if (s.s) { ctx!.strokeStyle = s.s; ctx!.lineWidth = s.lw ?? 1; ctx!.stroke() }
+        if (s.s) {
+          ctx!.strokeStyle = s.s
+          ctx!.lineWidth = s.lw ?? 1
+          ctx!.setLineDash(s.dash ?? [])
+          ctx!.stroke()
+          ctx!.setLineDash([])
+        }
       } else if (s.t === 'circle') {
         const [sx, sy] = project(s.cx, s.cy)
         ctx!.beginPath()
@@ -383,10 +389,12 @@ export default function ConceptMap(props: Props) {
         ctx!.setLineDash([])
       } else if (s.t === 'text') {
         const px = (s.size ?? 12) * k
-        if (px < 6) return
+        if (px < 5) return
         const [sx, sy] = project(s.x, s.y)
-        ctx!.font = `500 ${px}px system-ui, sans-serif`
-        ctx!.textAlign = 'left'
+        ctx!.font = s.mono
+          ? `500 ${px}px ui-monospace, Menlo, monospace`
+          : `500 ${px}px system-ui, sans-serif`
+        ctx!.textAlign = s.align ?? 'left'
         ctx!.textBaseline = 'middle'
         ctx!.fillStyle = s.f ?? 'rgba(148,163,184,0.7)'
         ctx!.fillText(s.text, sx, sy)
@@ -525,18 +533,19 @@ export default function ConceptMap(props: Props) {
         ctx!.strokeStyle = 'rgba(11,16,32,0.9)'
         ctx!.stroke()
 
-        // labels sit beside the dot, never on top of it
+        // labels sit beside the dot, never on top of it; authors may offset
         if (showAtomLabels || mark) {
           ctx!.font = '500 12px system-ui, sans-serif'
-          ctx!.textAlign = 'left'
+          ctx!.textAlign = it.lalign === 'right' ? 'right' : 'left'
           ctx!.textBaseline = 'middle'
           const label = it.name
-          const lx = sx + R + 6
+          const lx = sx + (it.ldx ?? (it.lalign === 'right' ? -(R + 6) : R + 6))
+          const ly = sy + (it.ldy ?? 0)
           ctx!.lineWidth = 3
           ctx!.strokeStyle = 'rgba(11,16,32,0.85)'
-          ctx!.strokeText(label, lx, sy)
+          ctx!.strokeText(label, lx, ly)
           ctx!.fillStyle = mark ? '#f8fafc' : 'rgba(226,232,240,0.92)'
-          ctx!.fillText(label, lx, sy)
+          ctx!.fillText(label, lx, ly)
         }
       }
     }

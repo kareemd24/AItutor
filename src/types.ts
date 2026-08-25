@@ -7,10 +7,10 @@ export type ItemKind = 'container' | 'atom'
 // shape until the camera zoom (relative to fit) reaches that multiple — this
 // is how fine detail appears as you zoom in.
 export type Shape =
-  | { t: 'rect'; x: number; y: number; w: number; h: number; r?: number; f?: string; s?: string; lw?: number; lod?: number; lodMax?: number }
+  | { t: 'rect'; x: number; y: number; w: number; h: number; r?: number; f?: string; s?: string; lw?: number; dash?: number[]; lod?: number; lodMax?: number }
   | { t: 'circle'; cx: number; cy: number; r: number; f?: string; s?: string; lw?: number; lod?: number; lodMax?: number }
   | { t: 'line'; pts: number[]; s?: string; lw?: number; dash?: number[]; lod?: number; lodMax?: number }
-  | { t: 'text'; x: number; y: number; text: string; size?: number; f?: string; lod?: number; lodMax?: number }
+  | { t: 'text'; x: number; y: number; text: string; size?: number; f?: string; align?: 'left' | 'center'; mono?: boolean; lod?: number; lodMax?: number }
 
 export interface Item {
   id: string
@@ -36,6 +36,11 @@ export interface Item {
   lod?: number
   /** extra tap radius in world units, for atoms whose art is bigger than a dot */
   hitR?: number
+  /** label offset in screen px (ldx replaces the default right-of-dot offset) */
+  ldx?: number
+  ldy?: number
+  /** right-align the label so it ends at the offset (for left-side labels) */
+  lalign?: 'right'
 }
 
 export interface ModuleDef {

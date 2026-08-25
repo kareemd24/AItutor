@@ -248,19 +248,19 @@ async function run() {
     await page.goto(`${base}#/m/rack/explore`)
     await page.reload({ waitUntil: 'networkidle' })
     await page.waitForSelector('[data-testid="explore-card"]')
-    await tapWorld(page, 200, 91) // top-of-rack switch
+    await tapWorld(page, 240, 65) // top-of-rack switches
     let card = await page.textContent('[data-testid="explore-card"]')
     if (!card.includes('Top-of-rack')) fail(`explore tap on ToR switch showed: ${card.slice(0, 60)}`)
     // at fit zoom the GPU die is LOD-hidden: tapping its spot must select the module, not the die
-    await tapWorld(page, 686, 444)
+    await tapWorld(page, 635, 444)
     card = await page.textContent('[data-testid="explore-card"]')
-    if (card.includes('GPU die')) fail('LOD-hidden die was selectable at fit zoom')
+    if (card.includes('Blackwell dies')) fail('LOD-hidden die was selectable at fit zoom')
     if (!card.includes('GPU module')) fail(`expected GPU module container, got: ${card.slice(0, 60)}`)
     // zoom in — now the die is there
-    await page.evaluate(() => window.__cmFocusWorld(686, 444, 2))
-    await tapWorld(page, 686, 444)
+    await page.evaluate(() => window.__cmFocusWorld(635, 444, 2))
+    await tapWorld(page, 635, 444)
     card = await page.textContent('[data-testid="explore-card"]')
-    if (!card.includes('GPU die')) fail(`zoomed explore tap missed the die: ${card.slice(0, 60)}`)
+    if (!card.includes('Blackwell dies')) fail(`zoomed explore tap missed the die: ${card.slice(0, 60)}`)
     await shot(page, 'rack-explore-zoom')
 
     // ---- 7c. rack drill: LOD targets answered by zooming ------------------

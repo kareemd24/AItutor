@@ -9,12 +9,12 @@ for hand-designed concept layouts, everything downstream kept.
 
 | Module | What you learn |
 |---|---|
-| **The Journey of a Token** | The whole inference pipeline as one animated flow: tokenize → prefill (parallel particles, writing the KV cache) → the decode loop (one particle per lap, reading the cache) → streaming out |
-| **Inside a GPU Rack** | An illustrated rack — ToR switch, power shelves, busbar, CDU — with exploded views of a compute tray (CPUs, NICs, NVSwitches) and the GPU module itself (die, HBM, VRM, cold plate); fine detail appears as you zoom |
+| **The Journey of a Token** | A real worked example — "The capital of France is" → " Paris" — with actual token chips, live attention weights, a logit bar chart, and a KV cache that grows a slot per lap |
+| **Inside a GPU Rack** | A real GB200 NVL72: 18 compute trays (2 Bianca boards each), 9 NVSwitch trays, 33 kW power shelves, coolant manifolds and the 5,000-cable copper NVLink spine — exploding down to one Blackwell module |
 | **The Transformer, Block by Block** | Tokenizer → embeddings → attention (Q/K/V, scores, KV cache, GQA) → FFN (up/gate/down, MoE) → output head, hung on the residual spine |
 | **The Inference Stack** | Prefill vs decode, TTFT vs inter-token latency, speculative decoding (draft → verify → acceptance), continuous batching, PagedAttention, FlashAttention, quantization |
 | **The Training Pipeline** | Pretraining (data, loss, AdamW, scaling laws) → post-training (SFT, RLHF, reward models, PPO, DPO, RLVR, Constitutional AI, distillation) over distributed-training machinery |
-| **Silicon: GPUs, ASICs & Packaging** | SMs and tensor cores vs systolic arrays and vector units; HBM stacks, TSVs, CoWoS interposers, chiplets, the reticle limit |
+| **Silicon: GPUs, ASICs & Packaging** | An H100-style floorplan (SM banks, the split 50 MB L2, HBM PHYs), a TPU-style 128×128 systolic array, and a CoWoS package cross-section |
 | **The Memory Hierarchy** | Registers → SRAM → HBM → DDR → NVMe as a staircase, plus the physics: arithmetic intensity, the memory wall, bandwidth vs capacity |
 | **The AI Datacenter & Optical Networking** | NVLink/NVSwitch scale-up vs InfiniBand/RoCE scale-out, Clos fabrics, and inside the optics: lasers, modulators, DSPs, silicon photonics, CPO, LPO |
 
