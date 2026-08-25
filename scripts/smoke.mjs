@@ -281,6 +281,26 @@ async function run() {
     await page.waitForSelector('[data-testid="learn-card"]')
     await shot(page, 'tokenpath-learn')
 
+    // ---- 7e. the grand tour crosses all four modules ----------------------
+    await page.goto(`${base}#/tour`)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForSelector('[data-testid="tour-card"]')
+    const tourModules = new Set()
+    for (let i = 0; i < 40; i++) {
+      tourModules.add(await page.evaluate(() => window.__cmModule))
+      const next = page.locator('[data-testid="tour-next"]')
+      if (await next.count() === 0) break
+      await next.click()
+      await page.waitForTimeout(60)
+    }
+    if (await page.locator('[data-testid="tour-end"]').count() === 0) {
+      fail('tour never reached its final step')
+    }
+    for (const m of ['tokenpath', 'inference', 'memory', 'rack']) {
+      if (!tourModules.has(m)) fail(`tour never visited module ${m} (saw: ${[...tourModules].join(',')})`)
+    }
+    await shot(page, 'tour-end')
+
     // ---- 8. phone viewport: no overflow, drill still playable -------------
     const phone = await context.browser().newContext({
       viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true,

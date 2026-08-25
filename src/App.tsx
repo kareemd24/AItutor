@@ -4,6 +4,7 @@ import type { Mode } from './types'
 import Home from './screens/Home'
 import ModuleSetup from './screens/ModuleSetup'
 import Play from './screens/Play'
+import Tour from './screens/Tour'
 
 // Hash routing so every module and mode is linkable and back works.
 // Routes:  #/  ·  #/m/:id  ·  #/m/:id/:mode
@@ -28,6 +29,9 @@ export default function App() {
   const hash = useHash()
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean)
 
+  if (parts[0] === 'tour') {
+    return <Tour />
+  }
   if (parts[0] === 'm' && parts[1]) {
     const mod = getModule(parts[1])
     if (mod) {

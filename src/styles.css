@@ -45,7 +45,24 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .sub { color: var(--muted); margin-top: 8px; line-height: 1.5; max-width: 56ch; }
 
-.module-list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+.tour-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: linear-gradient(100deg, rgba(251, 191, 36, 0.08), rgba(125, 211, 252, 0.08));
+  transition: border-color 0.15s, transform 0.15s;
+}
+.tour-banner:hover { border-color: var(--amber); transform: translateY(-1px); }
+.tour-banner h2 { font-size: 17px; margin-bottom: 4px; color: var(--amber); }
+.tour-banner p { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.tour-banner div { flex: 1; min-width: 0; }
+.tour-go { color: var(--amber); font-weight: 700; flex-shrink: 0; }
+
+.module-list { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
 
 .module-card {
   display: flex;

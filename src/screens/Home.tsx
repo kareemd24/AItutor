@@ -29,6 +29,16 @@ export default function Home() {
           and tapping the place <em>is</em> the answer.
         </p>
       </header>
+      <a className="tour-banner" href="#/tour">
+        <div>
+          <h2>▶ The Grand Tour</h2>
+          <p>
+            Follow one request — <em>"The capital of France is"</em> — from keystroke to silicon:
+            through the model, across the serving GPU, into memory, down to the rack.
+          </p>
+        </div>
+        <span className="tour-go">Start →</span>
+      </a>
       <div className="module-list">
         {MODULES.map(m => {
           const stats = moduleStats(m.items.map(i => i.id))

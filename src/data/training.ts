@@ -1,111 +1,177 @@
-import type { ModuleDef } from '../types'
+import type { ModuleDef, Shape } from '../types'
 
-// Layout: the model's life story runs left → right (pretraining → post-training),
-// with the distributed-systems machinery that powers both spanning the bottom.
+// The training story, told through one example. The corpus contains
+// "…the capital of France is Paris." — watch the model read it, guess,
+// get scored, and have every weight nudged (blue = forward, red = the
+// gradient flowing back). Post-training runs a preference vignette, and
+// the machinery below averages that same gradient across thousands of GPUs.
+
 const sky = (a: number) => `hsla(199,90%,65%,${a})`
 const amber = (a: number) => `hsla(38,95%,60%,${a})`
+const emerald = (a: number) => `hsla(152,65%,55%,${a})`
+const rose = (a: number) => `hsla(340,75%,65%,${a})`
 const slate = (a: number) => `hsla(220,20%,70%,${a})`
+const ink = 'rgba(226,232,240,0.9)'
+
+// ---- pretraining: one example, forward and back --------------------------
+const preArt: Shape[] = [
+  // the only chart that matters for months: loss going down
+  { t: 'line', pts: [100, 100, 240, 100], s: slate(0.35), lw: 1 },
+  { t: 'line', pts: [100, 62, 100, 100], s: slate(0.35), lw: 1 },
+  { t: 'line', pts: [100, 66, 135, 76, 170, 84, 205, 90, 240, 95], s: sky(0.7), lw: 1.5 },
+  { t: 'text', x: 106, y: 58, text: 'loss ↓ over trillions of tokens', size: 6, f: slate(0.6), lod: 1.15 },
+  // one document from the corpus
+  { t: 'rect', x: 70, y: 140, w: 36, h: 46, r: 2, f: slate(0.08), s: slate(0.4), lw: 1 },
+  ...Array.from({ length: 5 }, (_, i): Shape => (
+    { t: 'line', pts: [75, 148 + i * 8, 101, 148 + i * 8], s: slate(0.35), lw: 1 }
+  )),
+  // the example sentence, target highlighted
+  { t: 'line', pts: [108, 163, 118, 163], s: sky(0.5), lw: 1.2 },
+  { t: 'rect', x: 120, y: 155, w: 152, h: 16, r: 3, f: sky(0.08), s: sky(0.4), lw: 0.9 },
+  { t: 'text', x: 188, y: 163, text: '…France is', size: 5.8, f: ink, align: 'center', mono: true },
+  { t: 'rect', x: 226, y: 157, w: 42, h: 12, r: 2, f: emerald(0.2), s: emerald(0.5), lw: 0.8 },
+  { t: 'text', x: 247, y: 163, text: 'Paris', size: 5.8, f: emerald(0.95), align: 'center', mono: true },
+  { t: 'text', x: 196, y: 146, text: 'truth (hidden from the model)', size: 4.8, f: emerald(0.6), lod: 1.3 },
+  // forward into the model, prediction comes out
+  { t: 'line', pts: [274, 163, 302, 163], s: sky(0.6), lw: 1.4 },
+  { t: 'rect', x: 304, y: 147, w: 46, h: 32, r: 4, f: amber(0.12), s: amber(0.5), lw: 1.2 },
+  { t: 'text', x: 327, y: 163, text: 'model', size: 6, f: ink, align: 'center' },
+  { t: 'text', x: 358, y: 148, text: 'Paris', size: 5, f: ink, mono: true, lod: 1.2 },
+  { t: 'rect', x: 384, y: 145, w: 26, h: 5, r: 1, f: emerald(0.7), lod: 1.2 },
+  { t: 'text', x: 358, y: 158, text: 'Lyon', size: 5, f: ink, mono: true, lod: 1.2 },
+  { t: 'rect', x: 384, y: 155, w: 19, h: 5, r: 1, f: slate(0.45), lod: 1.2 },
+  { t: 'text', x: 358, y: 168, text: 'the', size: 5, f: ink, mono: true, lod: 1.2 },
+  { t: 'rect', x: 384, y: 165, w: 7, h: 5, r: 1, f: slate(0.45), lod: 1.2 },
+  { t: 'text', x: 358, y: 179, text: '0.42 · 0.31 · 0.08', size: 4.6, f: slate(0.6), mono: true, lod: 1.35 },
+  // the score
+  { t: 'text', x: 300, y: 200, text: 'loss = −log 0.42 ≈ 0.87', size: 5.8, f: rose(0.85), mono: true },
+  // gradients flow BACK
+  { t: 'line', pts: [390, 216, 120, 216], s: rose(0.5), lw: 1.3, dash: [5, 4] },
+  { t: 'line', pts: [128, 212, 118, 216, 128, 220], s: rose(0.5), lw: 1.3 },
+  { t: 'text', x: 130, y: 250, text: 'gradients: "which way makes Paris likelier?"', size: 5.2, f: rose(0.7), lod: 1.15 },
+  { t: 'text', x: 130, y: 262, text: 'every weight nudged: w −= lr · g', size: 5.2, f: slate(0.65), lod: 1.15 },
+  // the LR schedule, drawn
+  { t: 'line', pts: [100, 305, 250, 305], s: slate(0.3), lw: 1 },
+  { t: 'line', pts: [102, 303, 112, 272, 150, 278, 200, 290, 248, 302], s: amber(0.6), lw: 1.4 },
+  { t: 'text', x: 118, y: 316, text: 'warmup → cruise → cool', size: 5, f: slate(0.6), lod: 1.25 },
+]
+
+// ---- post-training: one preference ---------------------------------------
+const postArt: Shape[] = [
+  { t: 'rect', x: 490, y: 160, w: 118, h: 15, r: 3, f: slate(0.1), s: slate(0.35), lw: 0.9 },
+  { t: 'text', x: 549, y: 167.5, text: '"explain photosynthesis"', size: 5.4, f: ink, align: 'center', mono: true },
+  { t: 'line', pts: [610, 167, 622, 167], s: slate(0.4), lw: 1 },
+  { t: 'rect', x: 626, y: 156, w: 62, h: 22, r: 3, f: emerald(0.1), s: emerald(0.45), lw: 1 },
+  { t: 'text', x: 657, y: 167, text: 'A: clear ✓', size: 5.2, f: emerald(0.9), align: 'center' },
+  { t: 'rect', x: 694, y: 156, w: 62, h: 22, r: 3, f: slate(0.08), s: slate(0.35), lw: 1 },
+  { t: 'text', x: 725, y: 167, text: 'B: rambling', size: 5.2, f: slate(0.7), align: 'center' },
+  { t: 'text', x: 772, y: 167, text: 'A ≻ B', size: 7, f: amber(0.9), mono: true },
+  { t: 'line', pts: [770, 178, 630, 236], s: amber(0.4), lw: 1.1, dash: [4, 4] },
+  { t: 'text', x: 700, y: 212, text: 'preferences train the judge ↓', size: 5, f: amber(0.6), lod: 1.25 },
+]
+
+// ---- distributed: the same gradient, everywhere --------------------------
+const distArt: Shape[] = [
+  ...Array.from({ length: 3 }, (_, i): Shape => (
+    { t: 'rect', x: 126 + i * 18, y: 500, w: 14, h: 20, r: 2, f: sky(0.35), s: sky(0.5), lw: 0.8, lod: 1.25 }
+  )),
+  { t: 'text', x: 150, y: 535, text: 'copies', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+  { t: 'rect', x: 246, y: 500, w: 48, h: 20, r: 2, s: sky(0.5), lw: 0.8, lod: 1.25 },
+  { t: 'line', pts: [262, 500, 262, 520], s: sky(0.5), lw: 0.8, lod: 1.25 },
+  { t: 'line', pts: [278, 500, 278, 520], s: sky(0.5), lw: 0.8, lod: 1.25 },
+  { t: 'text', x: 270, y: 535, text: 'sliced matrices', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+  ...Array.from({ length: 3 }, (_, i): Shape => (
+    { t: 'rect', x: 358 + i * 24, y: 500, w: 16, h: 20, r: 2, f: sky(0.2), s: sky(0.5), lw: 0.8, lod: 1.25 }
+  )),
+  { t: 'line', pts: [375, 510, 381, 510], s: slate(0.6), lw: 1, lod: 1.25 },
+  { t: 'line', pts: [399, 510, 405, 510], s: slate(0.6), lw: 1, lod: 1.25 },
+  { t: 'text', x: 390, y: 535, text: 'stages', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+  { t: 'circle', cx: 870, cy: 512, r: 17, s: amber(0.5), lw: 1.2, lod: 1.25 },
+  ...Array.from({ length: 4 }, (_, i): Shape => (
+    { t: 'circle', cx: 870 + 17 * Math.cos((i * Math.PI) / 2), cy: 512 + 17 * Math.sin((i * Math.PI) / 2), r: 3.5, f: amber(0.7), lod: 1.25 }
+  )),
+  { t: 'text', x: 870, y: 545, text: 'gradients circle the ring', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
+]
 
 export const training: ModuleDef = {
   id: 'training',
   title: 'The Training Pipeline',
-  tagline: 'From a pile of text to a helpful model: pretraining, post-training, and the machinery underneath.',
+  tagline: 'One example — "…France is Paris" — guessed, scored, and turned into a nudge on every weight, averaged across thousands of GPUs.',
   world: { w: 1000, h: 620 },
-  art: [
-    // the only chart that matters for months: loss going down
-    { t: 'line', pts: [100, 105, 400, 105], s: slate(0.35), lw: 1 },
-    { t: 'line', pts: [100, 62, 100, 105], s: slate(0.35), lw: 1 },
-    { t: 'line', pts: [100, 68, 150, 80, 200, 88, 260, 94, 330, 99, 400, 102], s: sky(0.7), lw: 1.5 },
-    { t: 'text', x: 108, y: 66, text: 'loss, over trillions of tokens', size: 7.5, f: slate(0.6), lod: 1.15 },
-    // how one step is split: copies (DP), slices (TP), stages (PP), a ring (all-reduce)
-    ...Array.from({ length: 3 }, (_, i) => (
-      { t: 'rect' as const, x: 126 + i * 18, y: 500, w: 14, h: 20, r: 2, f: sky(0.35), s: sky(0.5), lw: 0.8, lod: 1.25 }
-    )),
-    { t: 'text', x: 150, y: 535, text: 'copies', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
-    { t: 'rect', x: 246, y: 500, w: 48, h: 20, r: 2, s: sky(0.5), lw: 0.8, lod: 1.25 },
-    { t: 'line', pts: [262, 500, 262, 520], s: sky(0.5), lw: 0.8, lod: 1.25 },
-    { t: 'line', pts: [278, 500, 278, 520], s: sky(0.5), lw: 0.8, lod: 1.25 },
-    { t: 'text', x: 270, y: 535, text: 'sliced matrices', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
-    ...Array.from({ length: 3 }, (_, i) => (
-      { t: 'rect' as const, x: 358 + i * 24, y: 500, w: 16, h: 20, r: 2, f: sky(0.2), s: sky(0.5), lw: 0.8, lod: 1.25 }
-    )),
-    { t: 'line', pts: [375, 510, 381, 510], s: slate(0.6), lw: 1, lod: 1.25 },
-    { t: 'line', pts: [399, 510, 405, 510], s: slate(0.6), lw: 1, lod: 1.25 },
-    { t: 'text', x: 390, y: 535, text: 'stages', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
-    // the all-reduce ring
-    { t: 'circle', cx: 870, cy: 512, r: 17, s: amber(0.5), lw: 1.2, lod: 1.25 },
-    ...Array.from({ length: 4 }, (_, i) => (
-      { t: 'circle' as const, cx: 870 + 17 * Math.cos((i * Math.PI) / 2), cy: 512 + 17 * Math.sin((i * Math.PI) / 2), r: 3.5, f: amber(0.7), lod: 1.25 }
-    )),
-    { t: 'text', x: 870, y: 545, text: 'gradients circle the ring', size: 7, f: slate(0.6), align: 'center', lod: 1.25 },
-  ],
   flows: [
+    // forward (blue) and the gradient flowing back (red)
+    { pts: [110, 163, 300, 163], color: sky(0.75), n: 3, speed: 70, size: 2.2 },
+    { pts: [390, 216, 122, 216], color: rose(0.75), n: 3, speed: 70, size: 2.2 },
+    // gradients circling the all-reduce ring
     { pts: [887, 512, 870, 529, 853, 512, 870, 495, 887, 512], color: amber(0.8), n: 3, speed: 40, size: 2 },
   ],
   items: [
     {
       id: 'tr.pre', name: 'Pretraining', kind: 'container', zone: 'The model’s life',
-      x: 240, y: 190, w: 360, h: 280,
-      note: 'Months of next-token prediction over trillions of tokens — where all the raw capability comes from.',
+      x: 240, y: 190, w: 360, h: 280, art: preArt,
+      note: 'Watch one example: the corpus says "…France is Paris." The model guesses (blue, forward), gets scored, and the correction flows back through every weight (red). Repeat 10 trillion times.',
     },
-    { id: 'tr.data', name: 'Data curation', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 150, y: 130,
-      note: 'Filtering, deduplicating and mixing the corpus — quietly one of the biggest levers on final model quality.' },
-    { id: 'tr.ntp', name: 'Next-token prediction', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 330, y: 130,
-      note: 'The whole objective: given everything so far, guess the next token — repeated over 10+ trillion tokens. Every capability we observe is a side effect of doing this well.',
+    { id: 'tr.data', name: 'Data curation', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 88, y: 163, hitR: 25, lalign: 'right' as const,
+      note: 'The corpus: trillions of tokens of filtered, deduplicated text. Our sentence is one line in one document among billions — its quality is why curation matters.' },
+    { id: 'tr.ntp', name: 'Next-token prediction', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 327, y: 163, hitR: 28, ldy: -26,
+      note: 'The model reads "…capital of France is" and guesses: Paris 0.42, Lyon 0.31. The truth was " Paris" — right answer, not enough confidence. That gap is the lesson.',
       role: 'asks the model to guess the next token — pretraining’s only objective' },
-    { id: 'tr.scaling', name: 'Scaling laws', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 240, y: 195,
-      note: 'Loss falls predictably with compute, data and parameters — Chinchilla’s famous ratio: about 20 training tokens per parameter. The curves tell you how big to build before you build.' },
-    { id: 'tr.xent', name: 'Cross-entropy loss', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 150, y: 265,
-      note: 'The penalty for putting low probability on the true next token — the number the whole run exists to push down.' },
-    { id: 'tr.adamw', name: 'AdamW', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 255, y: 265,
-      note: 'The default optimizer: per-parameter adaptive steps plus decoupled weight decay — and two extra copies of every parameter in memory.' },
-    { id: 'tr.lr', name: 'LR schedule', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 355, y: 265,
-      note: 'Warm up gently, cruise, then cool down — get the decay wrong and the last 10% of a months-long run is wasted.' },
+    { id: 'tr.xent', name: 'Cross-entropy loss', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 300, y: 200, hitR: 40, ldy: 24,
+      note: 'loss = −log P(truth) = −log 0.42 ≈ 0.87. Total confidence would score 0. The entire months-long run exists to push this one number down.' },
+    { id: 'tr.backprop', name: 'Backpropagation', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 200, y: 216, hitR: 55, ldy: -30,
+      note: 'The red path: the loss is unwound backwards through every layer, asking each weight "which way would have made Paris more likely?" — that answer is its gradient.',
+      role: 'carries the correction backwards through every layer' },
+    { id: 'tr.adamw', name: 'AdamW', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 160, y: 240, hitR: 40, ldy: 16,
+      note: 'The stepper: takes each weight’s gradient, smooths it with momentum, and nudges — w −= lr·g. The bookkeeping costs two extra copies of every parameter.' },
+    { id: 'tr.scaling', name: 'Scaling laws', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 170, y: 82, hitR: 50,
+      note: 'Those 0.87s fall along astonishingly predictable curves as compute, data and parameters grow — Chinchilla’s ratio: ~20 training tokens per parameter.' },
+    { id: 'tr.lr', name: 'LR schedule', kind: 'atom', parent: 'tr.pre', zone: 'The model’s life', x: 175, y: 290, hitR: 45,
+      note: 'How hard each nudge pushes, over time: warm up gently, cruise, cool down. Get the cooldown wrong and the last 10% of the run is wasted.' },
 
     {
       id: 'tr.post', name: 'Post-training', kind: 'container', zone: 'The model’s life',
-      x: 720, y: 190, w: 480, h: 280,
-      note: 'The short, cheap phase that turns a raw text predictor into an assistant — teaching behavior, not knowledge.',
+      x: 720, y: 190, w: 480, h: 280, art: postArt,
+      note: 'Pretraining taught it Paris; post-training teaches it manners. The raw material: a human reads two answers and prefers A — everything below turns choices like that into behavior.',
     },
     { id: 'tr.sft', name: 'SFT', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 540, y: 120,
-      note: 'Supervised fine-tuning on curated prompt→response pairs — teaches the format and voice of being helpful before any RL starts.',
+      note: 'Step one: fine-tune on curated prompt→response demonstrations — same loss as pretraining, but the "corpus" is now examples of being helpful.',
       role: 'fine-tunes on curated demonstrations to teach instruction-following' },
     { id: 'tr.rlhf', name: 'RLHF', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 680, y: 120,
-      note: 'The umbrella recipe: collect human preferences, fit a reward model to them, then optimize the policy against that reward.' },
+      note: 'The umbrella recipe: collect thousands of A≻B choices like the one below, fit a reward model to them, then optimize the policy against that judge.' },
     { id: 'tr.dpo', name: 'DPO', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 820, y: 120,
-      note: 'Skips the reward model entirely: a simple loss pushes the chosen response up and the rejected one down, directly on preference pairs.',
+      note: 'The shortcut: skip the judge entirely — a loss that pushes answer A up and answer B down, directly on the preference pairs.',
       role: 'learns from preference pairs directly, with no reward model and no RL loop' },
     { id: 'tr.distill', name: 'Distillation', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 920, y: 185,
       note: 'A small student trains on a big teacher’s outputs, inheriting much of its behavior at a fraction of the serving cost.' },
     { id: 'tr.rm', name: 'Reward model', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 600, y: 245,
-      note: 'A model trained on human preference comparisons to output a score — the judge the policy learns to please.' },
+      note: 'The judge: trained on the A≻B choices above to score any response. From here on, the policy learns to please it — for better and for worse.' },
     { id: 'tr.ppo', name: 'PPO', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 700, y: 245,
-      note: 'RLHF’s classic optimizer: clips each policy update so the model never drifts too far from the last version in one step.' },
+      note: 'RLHF’s classic optimizer: chase the judge’s score, but clip each update so the model never drifts too far from the last version in one step.' },
     { id: 'tr.cai', name: 'Constitutional AI / RLAIF', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 805, y: 245,
-      note: 'The model critiques and revises its own outputs against written principles — AI feedback replacing most of the human labeling.' },
+      note: 'Scale the choosing itself: the model critiques and revises its own outputs against written principles — AI feedback replacing most human labels.' },
     { id: 'tr.rlvr', name: 'RLVR', kind: 'atom', parent: 'tr.post', zone: 'The model’s life', x: 905, y: 290,
-      note: 'RL with verifiable rewards: math and code where a checker, not a learned judge, says right or wrong — the engine behind reasoning models.',
+      note: 'Swap the learned judge for a checker: math and code where "did the tests pass?" is the reward — the engine behind reasoning models.',
       role: 'uses checkable rewards like passing tests — the recipe behind reasoning models' },
 
     {
       id: 'tr.dist', name: 'Distributed training', kind: 'container', zone: 'The machinery',
-      x: 500, y: 480, w: 880, h: 200,
-      note: 'No single chip can hold or train a frontier model — these are the ways one training step is split across thousands of GPUs.',
+      x: 500, y: 480, w: 880, h: 200, art: distArt,
+      note: 'Our example’s gradient was computed on one GPU — alongside thousands of GPUs doing the same for their own examples, all merged into one step. These are the ways to split it.',
     },
     { id: 'tr.dp', name: 'Data parallelism', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 150, y: 460,
-      note: 'Every GPU holds the full model but sees a different slice of the batch; gradients are averaged each step.' },
-    { id: 'tr.tp', name: 'Tensor parallelism', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 270, y: 460,
-      note: 'Splits individual weight matrices across GPUs — so chatty it only works over the fastest links inside one server.' },
+      note: 'Full model copies, different examples: our sentence went to one GPU while 4,095 others read different lines — gradients averaged each step.' },
+    { id: 'tr.tp', name: 'Tensor parallelism', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 270, y: 460, ldy: 20,
+      note: 'Splits individual weight matrices across GPUs — so chatty it only works over NVLink inside one scale-up domain.' },
     { id: 'tr.pp', name: 'Pipeline parallelism', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 390, y: 460,
       note: 'Different GPUs own different layers; micro-batches march through like an assembly line to keep every stage busy.' },
-    { id: 'tr.fsdp', name: 'FSDP / ZeRO', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 510, y: 460,
+    { id: 'tr.fsdp', name: 'FSDP / ZeRO', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 510, y: 460, ldy: 20,
       note: 'Shards parameters, gradients and optimizer state across GPUs, gathering each layer just in time — data parallelism without the memory bill.' },
     { id: 'tr.bf16', name: 'Mixed precision (BF16)', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 630, y: 460,
       note: 'Compute in 16-bit, keep a 32-bit master copy of the weights — half the memory and twice the speed for almost no accuracy loss.' },
-    { id: 'tr.ckpt', name: 'Gradient checkpointing', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 750, y: 460,
-      note: 'Throw away activations after the forward pass and recompute them during backward — trading ~30% more compute for huge memory savings.' },
+    { id: 'tr.ckpt', name: 'Gradient checkpointing', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 750, y: 460, ldy: 20,
+      note: 'Throw away activations after the forward pass and recompute them during backward — ~30% more compute for huge memory savings.' },
     { id: 'tr.allreduce', name: 'All-reduce', kind: 'atom', parent: 'tr.dist', zone: 'The machinery', x: 870, y: 460,
-      note: 'The collective that sums gradients across every GPU each step — the traffic pattern training networks are designed around.',
+      note: 'The merge: every GPU’s gradients circle the ring and sum, so all copies step identically — the traffic pattern training networks are built for.',
       role: 'averages gradients across every GPU at each training step' },
   ],
 }

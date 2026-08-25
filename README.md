@@ -13,10 +13,15 @@ for hand-designed concept layouts, everything downstream kept.
 | **Inside a GPU Rack** | A real GB200 NVL72: 18 compute trays (2 Bianca boards each), 9 NVSwitch trays, 33 kW power shelves, coolant manifolds and the 5,000-cable copper NVLink spine — exploding down to one Blackwell module |
 | **The Transformer, Block by Block** | Tokenizer → embeddings → attention (Q/K/V, scores, KV cache, GQA) → FFN (up/gate/down, MoE) → output head, hung on the residual spine |
 | **The Inference Stack** | Prefill vs decode, TTFT vs inter-token latency, speculative decoding (draft → verify → acceptance), continuous batching, PagedAttention, FlashAttention, quantization |
-| **The Training Pipeline** | Pretraining (data, loss, AdamW, scaling laws) → post-training (SFT, RLHF, reward models, PPO, DPO, RLVR, Constitutional AI, distillation) over distributed-training machinery |
+| **The Training Pipeline** | One example's story: "…France is Paris" guessed (Paris 0.42), scored (−log 0.42), backpropagated and nudged — then SFT/RLHF/DPO/RLVR post-training and the distributed machinery |
 | **Silicon: GPUs, ASICs & Packaging** | An H100-style floorplan (SM banks, the split 50 MB L2, HBM PHYs), a TPU-style 128×128 systolic array, and a CoWoS package cross-section |
 | **The Memory Hierarchy** | Registers → SRAM → HBM → DDR → NVMe as a staircase, plus the physics: arithmetic intensity, the memory wall, bandwidth vs capacity |
 | **The AI Datacenter & Optical Networking** | NVLink/NVSwitch scale-up vs InfiniBand/RoCE scale-out, Clos fabrics, and inside the optics: lasers, modulators, DSPs, silicon photonics, CPO, LPO |
+
+**The Grand Tour** (`#/tour`) is a guided narrative that follows one request —
+"The capital of France is" — across four modules in 20 steps: through the
+model, across the serving GPU's timetable, into physical memory, down to the
+rack.
 
 ## The game
 
