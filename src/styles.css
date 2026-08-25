@@ -211,6 +211,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   border-top: 1px solid var(--line);
   padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
   animation: rise 0.18s ease-out;
+  max-height: 68dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 @keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 
@@ -222,6 +225,78 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .verdict.bad h3 { color: var(--bad); }
 
 .note { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin-top: 8px; max-width: 68ch; }
+
+/* Every teaching card follows the same beginner-first reading order. */
+.concept-guide { display: grid; gap: 10px; margin-top: 11px; }
+.concept-guide section > span,
+.concept-caution > span {
+  display: block;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.concept-guide p { font-size: 12.5px; line-height: 1.52; }
+.concept-plain {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid rgba(103, 232, 181, .24);
+  border-radius: 10px;
+  background: linear-gradient(105deg, rgba(103, 232, 181, .095), rgba(103, 232, 181, .025));
+}
+.concept-plain p { color: var(--text); font-size: 13.5px; line-height: 1.5; }
+.concept-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+  list-style: none;
+}
+.concept-steps li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 7px;
+  align-items: start;
+  min-height: 55px;
+  padding: 10px;
+  background: #0b1714;
+}
+.concept-steps li > span {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(230, 189, 114, .35);
+  border-radius: 50%;
+  color: var(--amber);
+  font: 700 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.concept-steps p { color: #d4dfda; font-size: 11px; line-height: 1.35; }
+.concept-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.concept-detail-grid section { min-width: 0; padding: 11px 13px; background: #0b1714; }
+.concept-detail-grid section > p { margin-top: 6px; color: var(--muted); }
+.concept-detail-grid .prompt-connection { background: rgba(230, 189, 114, .055); }
+.concept-detail-grid .prompt-connection > span { color: var(--amber); }
+.concept-detail-grid .prompt-connection > p { color: #dfd2ba; }
+.concept-caution {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 12px;
+  border-left: 2px solid rgba(230, 189, 114, .65);
+  background: rgba(230, 189, 114, .055);
+}
+.concept-caution > span { color: var(--amber); }
+.concept-caution p { color: #c9bcaa; }
 
 .kind-badge {
   font-size: 10.5px;
@@ -269,6 +344,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* thumb-friendly bump on coarse pointers */
 @media (pointer: coarse) {
   .primary-btn, .ghost-btn { min-height: 48px; }
+}
+
+@media (max-width: 680px) {
+  .panel { max-height: 72dvh; padding-inline: 12px; }
+  .concept-plain, .concept-caution { grid-template-columns: 1fr; gap: 6px; }
+  .concept-detail-grid { grid-template-columns: 1fr; }
+  .concept-steps { grid-template-columns: 1fr; }
+  .concept-steps li { min-height: 0; }
 }
 
 /* ---------------------------------------------------------- investor edition */

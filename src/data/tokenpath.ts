@@ -148,8 +148,8 @@ export const tokenpath: ModuleDef = {
         { t: 'circle', cx: 517, cy: 222, r: 2.2, f: amber(0.7), lod: 1.6 },
         { t: 'circle', cx: 517, cy: 234, r: 2.2, f: amber(0.7), lod: 1.6 },
         { t: 'circle', cx: 517, cy: 246, r: 2.2, f: amber(0.7), lod: 1.6 },
-        ...Array.from({ length: 6 }, (_, i): Shape => (
-          { t: 'circle', cx: 545, cy: 209 + i * 10, r: 2.2, f: i === 1 || i === 3 ? amber(0.9) : amber(0.25), lod: 1.6 }
+        ...[0.28, 0.74, 0.42, 0.9, 0.33, 0.58].map((strength, i): Shape => (
+          { t: 'circle', cx: 545, cy: 209 + i * 10, r: 2.2, f: amber(strength), lod: 1.6 }
         )),
         { t: 'circle', cx: 573, cy: 222, r: 2.2, f: amber(0.7), lod: 1.6 },
         { t: 'circle', cx: 573, cy: 234, r: 2.2, f: amber(0.7), lod: 1.6 },
@@ -158,7 +158,7 @@ export const tokenpath: ModuleDef = {
           { t: 'line', pts: [519, 234, 543, 209 + i * 10], s: amber(0.2), lw: 0.6, lod: 1.7 },
           { t: 'line', pts: [547, 209 + i * 10, 571, 234], s: amber(0.2), lw: 0.6, lod: 1.7 },
         ])).flat(),
-        { t: 'text', x: 545, y: 262, text: 'ask 4× more questions, keep the yeses', size: 5.5, f: slate(0.7), align: 'center', lod: 1.5 },
+        { t: 'text', x: 545, y: 262, text: 'expand → smoothly gate → compress', size: 5.5, f: slate(0.7), align: 'center', lod: 1.5 },
       ],
       note: 'Phase one: all 5 prompt positions can be processed in parallel through each layer. This compute-heavy phase is a major component of time to first token.',
       role: 'pushes the whole prompt through the model in one parallel pass',
@@ -173,10 +173,10 @@ export const tokenpath: ModuleDef = {
       note: 'Query–key dot products become softmax weights; those weights blend value vectors. The 0.61 on “ France” and 0.28 on “ capital” are illustrative values for one imagined head.' },
     { id: 'tp.attnex', name: 'Attention, live', kind: 'atom', parent: 'tp.prefill', zone: 'Phase one: prefill', x: 398, y: 237, hitR: 45, lod: 1.5,
       note: 'The arcs visualize one illustrative attention head while processing “ is.” Real heads and layers learn many different patterns; one attention map is not the model’s full explanation.' },
-    { id: 'tp.ffn', name: 'FFN station', kind: 'atom', parent: 'tp.prefill', zone: 'Phase one: prefill', x: 545, y: 150, hitR: 38, ldy: -52, ldx: -40,
-      note: 'The feed-forward network applies a learned nonlinear transformation to each position independently. “Geography?” and “a name coming?” are metaphors for features, not labeled neurons.' },
-    { id: 'tp.ffnex', name: 'FFN, live', kind: 'atom', parent: 'tp.prefill', zone: 'Phase one: prefill', x: 545, y: 232, hitR: 40, lod: 1.5,
-      note: 'Many FFNs expand the vector, apply a gated activation such as SwiGLU, then project it back down. The highlighted “features” are a metaphor; dense FFNs are not generally hard-sparse.' },
+    { id: 'tp.ffn', name: 'Per-token transform (FFN)', kind: 'atom', parent: 'tp.prefill', zone: 'Phase one: prefill', x: 545, y: 150, hitR: 38, ldy: -52, ldx: -40,
+      note: 'The feed-forward network gives each token position the same private rewrite step. It cannot look at other positions here; it transforms the context that attention has already brought into the position.' },
+    { id: 'tp.ffnex', name: 'FFN: expand → gate → compress', kind: 'atom', parent: 'tp.prefill', zone: 'Phase one: prefill', x: 545, y: 232, hitR: 40, lod: 1.5,
+      note: 'A typical modern FFN opens a wider temporary workspace, uses a nonlinear learned gate to reshape feature combinations, and compresses the result into an update that is added back. All six dots have varying strength to avoid implying a hard on/off lookup.' },
     { id: 'tp.ttft', name: 'First token out', kind: 'atom', parent: 'tp.prefill', zone: 'Phase one: prefill', x: 587, y: 272,
       note: 'After the final layer, the last prompt position scores the next token and this example selects “ Paris.” In a service, queueing and orchestration also contribute to time to first token.',
       role: 'marks the moment prefill ends and you finally see output' },
@@ -215,7 +215,7 @@ export const tokenpath: ModuleDef = {
       note: 'Only the newest position needs a fresh forward step. Earlier keys and values are reused from the cache rather than recomputed, while the new token still attends across that history.' },
     { id: 'tp.attn2', name: 'Attention (reads cache)', kind: 'atom', parent: 'tp.decode', zone: 'Phase two: decode', x: 762, y: 150, hitR: 36, ldy: -48, ldx: -60,
       note: '“ Paris”’s query runs against stored keys for the 5 earlier positions, reusing cached K/V while still performing new attention math for the newest position.' },
-    { id: 'tp.ffn2', name: 'FFN (weights stream)', kind: 'atom', parent: 'tp.decode', zone: 'Phase two: decode', x: 862, y: 150, hitR: 30, ldy: 48, ldx: -60,
+    { id: 'tp.ffn2', name: 'Per-token transform (FFN)', kind: 'atom', parent: 'tp.decode', zone: 'Phase two: decode', x: 862, y: 150, hitR: 30, ldy: 48, ldx: -60,
       note: 'The FFN runs again for the newest position. At small batches, moving large weight tensors can dominate the arithmetic, which is why decode is often bandwidth-bound.' },
     { id: 'tp.logits', name: 'Logits', kind: 'atom', parent: 'tp.decode', zone: 'Phase two: decode', x: 922, y: 150, ldy: -26,
       note: 'The output head produces one score per vocabulary entry—often tens or hundreds of thousands. The “Paris / Lyon / Berlin” bars are illustrative, not measured from a named model.' },

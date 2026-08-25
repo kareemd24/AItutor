@@ -35,8 +35,8 @@ export const TOUR: TourStep[] = [
     text: 'Inside each layer, each position can attend to earlier positions. The arcs are illustrative: one head might place 0.61 on " France" and 0.28 on " capital", while other heads and layers learn different relationships.',
   },
   {
-    module: 'tokenpath', item: 'tp.ffnex', title: 'The FFN adds the fact',
-    text: 'Then each position passes through a learned nonlinear transformation. “Geography?” and “a name coming?” are useful metaphors for features, not literal labeled neurons; the result nudges the representation toward a better continuation.',
+    module: 'tokenpath', item: 'tp.ffnex', title: 'The FFN transforms that context',
+    text: 'Attention has already made the “is” position aware of “capital” and “France.” Its feed-forward network now expands that one position into a wider temporary workspace, smoothly gates learned feature combinations, compresses them into an update, and adds the update back. Repeating this across layers can make a city-name continuation more likely—it does not fetch a single stored France fact.',
   },
   {
     module: 'tokenpath', item: 'tp.cache', title: 'The cache fills behind it',

@@ -6,10 +6,11 @@ place, and tapping the place is the answer.** Built from the
 for hand-designed concept layouts, everything downstream kept.
 
 The investor edition adds a plain-language thesis, diligence question, key
-metrics, generation-specific caveats, and primary sources to every module. A
-global concept finder jumps directly to any term on its map, while selected
-concepts add an **Investor lens** connecting the mechanism to latency, unit
-economics, supply, utilization, or defensibility.
+metrics, generation-specific caveats, and primary sources to every module.
+Every one of the 168 tappable concepts now answers four questions in order:
+**What does the term mean? What is happening? How does it connect to the worked
+prompt? Why does it matter?** A global concept finder jumps directly to any term
+on its map.
 
 ## The modules
 
@@ -43,8 +44,9 @@ coolant loops, token streams).
 
 Five modes over the same items:
 
-- **Learn** — guided tour, no score. Region by region, with one hand-written
-  sentence per item: the hook you hang the concept on.
+- **Learn** — guided tour, no score. Region by region, with a plain-English
+  definition, mechanism, worked-prompt connection, misconception check where
+  useful, and investor takeaway.
 - **Explore** — free roam: tap any component to see what it does, zoom in for
   the fine detail.
 - **Drill** — the game. Timed prompts weighted toward what you know least,
@@ -74,7 +76,7 @@ tap is computed, never guessed. It needs a Chromium binary
 ## Architecture
 
 ```
-src/data/*.ts        hand-authored layouts + notes (the dataset IS the product)
+src/data/*.ts        hand-authored layouts + beginner explanations (the dataset IS the product)
 src/game/engine.ts   pure logic: sampling, scoring, grading, Leitner — no DOM
 src/lib/progress.ts  versioned localStorage store; corruption costs history, never the app
 src/canvas/          one canvas component: camera, gestures, hit resolution

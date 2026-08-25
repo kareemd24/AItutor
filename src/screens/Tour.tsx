@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ConceptMap, { type Mark } from '../canvas/ConceptMap'
+import ConceptExplanation from '../components/ConceptExplanation'
 import { getModule } from '../data'
 import { TOUR } from '../data/tour'
 
@@ -11,6 +12,7 @@ export default function Tour() {
   const [idx, setIdx] = useState(0)
   const step = TOUR[idx]
   const mod = getModule(step.module)!
+  const item = step.item ? mod.items.find(candidate => candidate.id === step.item) : undefined
   const marks: Record<string, Mark> = step.item ? { [step.item]: 'focus' } : {}
   const isLast = idx === TOUR.length - 1
 
@@ -38,7 +40,9 @@ export default function Tour() {
           <h3>{step.title}</h3>
         </div>
         <div className="tour-example-label"><span>Worked illustration</span> Exact tokens and values vary by model and serving stack.</div>
-        <p className="note">{step.text}</p>
+        {item
+          ? <ConceptExplanation item={item} detailOverride={step.text} detailLabel="What happens in this step" showInvestor={!step.insight} />
+          : <p className="note">{step.text}</p>}
         {step.insight && <div className="investor-lens"><span>Investor lens</span><p>{step.insight}</p></div>}
         <div className="panel-actions">
           <button className="ghost-btn" disabled={idx === 0} onClick={() => setIdx(i => i - 1)}>

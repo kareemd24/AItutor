@@ -4,8 +4,8 @@ import { guideFor } from '../data/guides'
 import { moduleStats, resetItems } from '../lib/progress'
 
 const MODE_META = [
-  { id: 'learn', icon: '01', title: 'Learn', text: 'A guided visual walkthrough. No score and no assumed technical background.', featured: true },
-  { id: 'explore', icon: '⌕', title: 'Explore', text: 'Free roam. Tap any part to see the explanation and investor lens.' },
+  { id: 'learn', icon: '01', title: 'Learn', text: 'A guided visual walkthrough: plain meaning, real mechanism, prompt connection, then investor relevance.', featured: true },
+  { id: 'explore', icon: '⌕', title: 'Explore', text: 'Free roam. Tap any part for the same beginner-first explanation.' },
   { id: 'drill', icon: '◎', title: 'Drill', text: 'Short prompts weighted toward concepts you know least.' },
   { id: 'sprint', icon: '60', title: 'Sprint', text: 'A one-minute fluency check across the entire map.' },
   { id: 'review', icon: '↻', title: 'Review', text: 'Spaced repetition for concepts that are due.' },
@@ -77,7 +77,7 @@ export default function ModuleSetup({ mod }: { mod: ModuleDef }) {
         <section className="learning-section">
           <div className="section-heading compact">
             <p className="eyebrow">Choose a mode</p>
-            <h2>Build the picture, then test recall</h2>
+            <h2>Understand it first, then test recall</h2>
           </div>
           <div className="mode-list">
             {MODE_META.map(mode => (

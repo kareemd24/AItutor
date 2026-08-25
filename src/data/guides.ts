@@ -54,6 +54,7 @@ export const MODULE_GUIDES: Record<string, ModuleGuide> = {
     ],
     sources: [
       { label: 'Attention Is All You Need', publisher: 'Google Research', url: 'https://arxiv.org/abs/1706.03762' },
+      { label: 'GLU Variants Improve Transformer', publisher: 'Google Research', url: 'https://arxiv.org/abs/2002.05202' },
       { label: 'Grouped-Query Attention', publisher: 'Google Research', url: 'https://arxiv.org/abs/2305.13245' },
       { label: 'The Llama 3 Herd of Models', publisher: 'Meta AI', url: 'https://arxiv.org/abs/2407.21783' },
     ],

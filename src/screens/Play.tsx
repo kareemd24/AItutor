@@ -7,7 +7,7 @@ import {
   pickPrompt, type Prompt, type Verdict,
 } from '../game/engine'
 import { getProgress, recordResult } from '../lib/progress'
-import { investorNoteFor } from '../data/guides'
+import ConceptExplanation from '../components/ConceptExplanation'
 
 declare global {
   interface Window {
@@ -211,7 +211,7 @@ export default function Play({ mod, mode, initialItemId }: Props) {
                 <span className={`kind-badge ${sel.kind}`}>{sel.kind === 'container' ? 'region' : 'component'}</span>
                 <h3>{sel.name}</h3>
               </div>
-              <ConceptCopy item={sel} />
+              <ConceptExplanation item={sel} />
             </>
           ) : (
             <p className="note">
@@ -240,7 +240,7 @@ export default function Play({ mod, mode, initialItemId }: Props) {
               <span className={`kind-badge ${cur.kind}`}>{cur.kind === 'container' ? 'region' : 'concept'}</span>
               <h3>{cur.name}</h3>
             </div>
-            <ConceptCopy item={cur} />
+            <ConceptExplanation item={cur} />
             <div className="panel-actions">
               <button className="ghost-btn" disabled={tourIdx === 0} onClick={() => setTourIdx(i => i - 1)}>
                 ← Back
@@ -343,10 +343,7 @@ export default function Play({ mod, mode, initialItemId }: Props) {
             <h3>{verdict.headline}</h3>
             <span className="points">+{verdict.points}</span>
           </div>
-          <p className="note">{verdict.note}</p>
-          {prompt && investorNoteFor(prompt.item.id) && (
-            <div className="investor-lens"><span>Investor lens</span><p>{investorNoteFor(prompt.item.id)}</p></div>
-          )}
+          {prompt ? <ConceptExplanation item={prompt.item} /> : <p className="note">{verdict.note}</p>}
           {mode !== 'sprint' && (
             <div className="panel-actions">
               <button className="primary-btn" data-testid="next-btn" onClick={advance}>
@@ -357,16 +354,6 @@ export default function Play({ mod, mode, initialItemId }: Props) {
         </div>
       )}
     </div>
-  )
-}
-
-function ConceptCopy({ item }: { item: Item }) {
-  const investorNote = investorNoteFor(item.id)
-  return (
-    <>
-      <p className="note">{item.note}</p>
-      {investorNote && <div className="investor-lens"><span>Investor lens</span><p>{investorNote}</p></div>}
-    </>
   )
 }
 

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { MODULES } from '../data'
 import { guideFor } from '../data/guides'
+import { conceptGuideFor } from '../data/beginner'
 import { moduleStats } from '../lib/progress'
 
 function Ring({ value }: { value: number }) {
@@ -33,10 +34,15 @@ export default function Home() {
   const matches = useMemo(() => {
     if (cleanQuery.length < 2) return []
     return MODULES.flatMap(mod => mod.items.map(item => ({ mod, item })))
-      .filter(({ mod, item }) => `${item.name} ${item.note} ${mod.title}`.toLocaleLowerCase().includes(cleanQuery))
+      .filter(({ mod, item }) => {
+        const beginner = conceptGuideFor(item.id)
+        return `${item.name} ${item.note} ${beginner?.plain ?? ''} ${beginner?.prompt ?? ''} ${mod.title}`
+          .toLocaleLowerCase()
+          .includes(cleanQuery)
+      })
       .slice(0, 7)
   }, [cleanQuery])
-  const conceptCount = MODULES.reduce((sum, mod) => sum + mod.items.filter(item => item.kind === 'atom').length, 0)
+  const conceptCount = MODULES.reduce((sum, mod) => sum + mod.items.length, 0)
 
   return (
     <div className="home-shell">
@@ -56,6 +62,7 @@ export default function Home() {
             <p className="hero-sub">
               Follow a token from prompt to silicon, then connect model design, inference,
               memory, packaging, power, cooling, and networks to the questions investors ask.
+              No engineering background—and no unexplained acronyms—required.
             </p>
             <div className="hero-actions">
               <a className="primary-btn hero-btn" href="#/tour">Take the 10-minute tour <span>→</span></a>
@@ -63,7 +70,7 @@ export default function Home() {
             </div>
             <div className="hero-proof" aria-label="Course summary">
               <div><strong>{MODULES.length}</strong><span>visual maps</span></div>
-              <div><strong>{conceptCount}</strong><span>key concepts</span></div>
+              <div><strong>{conceptCount}</strong><span>plain-language concepts</span></div>
               <div><strong>Primary</strong><span>sources linked</span></div>
             </div>
           </div>
@@ -122,7 +129,7 @@ export default function Home() {
               {matches.length > 0 ? matches.map(({ mod, item }) => (
                 <a key={`${mod.id}:${item.id}`} role="listitem" href={`#/m/${mod.id}/explore/${item.id}`}>
                   <div><strong>{item.name}</strong><span>{mod.title}</span></div>
-                  <p>{item.note}</p>
+                  <p>{conceptGuideFor(item.id)?.plain ?? item.note}</p>
                   <span className="result-arrow">→</span>
                 </a>
               )) : <p className="search-empty">No match yet. Try a broader term.</p>}
@@ -134,7 +141,7 @@ export default function Home() {
           <div className="section-heading">
             <p className="eyebrow">The curriculum</p>
             <h2>Three layers, one investment picture</h2>
-            <p>Each module starts with the business question, then lets you learn, explore, and test the underlying concepts spatially.</p>
+            <p>Every concept starts in plain English, shows what is physically or mathematically happening, and reconnects it to the same worked prompt.</p>
           </div>
 
           {TRACKS.map(track => {
