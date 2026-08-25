@@ -1,11 +1,11 @@
 {
   "name": "ChipMap",
   "short_name": "ChipMap",
-  "description": "Learn AI and semiconductor concepts by tapping them on a map.",
+  "description": "An interactive investor field guide to AI models, inference economics, chips, memory, racks, and networks.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0b1020",
-  "theme_color": "#0b1020",
+  "background_color": "#07110f",
+  "theme_color": "#07110f",
   "icons": [
     { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

@@ -8,44 +8,48 @@ export interface TourStep {
   item?: string
   title: string
   text: string
+  insight?: string
 }
 
 export const TOUR: TourStep[] = [
   {
     module: 'tokenpath', title: 'You hit enter',
-    text: 'You type "The capital of France is" and press enter. Over the next second, that sentence will cross a tokenizer, a neural network, a serving scheduler, three kinds of memory, and a 132-kilowatt rack. Follow it.',
+    text: 'You type "The capital of France is" and press enter. Over the next milliseconds to seconds, that sentence may cross a tokenizer, a neural network, a serving scheduler, several memory tiers, and a rack-scale system. Follow it.',
+    insight: 'Every product-level promise—quality, responsiveness, price, privacy—maps to choices somewhere along this physical and software path.',
   },
   {
     module: 'tokenpath', item: 'tp.tok', title: 'It becomes 5 tokens',
-    text: 'First stop: the tokenizer chops your 24 characters into five chips — "The", " capital", " of", " France", " is" — and looks up each one’s ID. From here on, the model never sees letters again.',
+    text: 'In this GPT-style example, the tokenizer chops 24 characters into five chips — "The", " capital", " of", " France", " is" — and looks up each ID. Another tokenizer may split the same sentence differently.',
   },
   {
     module: 'tokenpath', item: 'tp.embed', title: 'Tokens become geometry',
-    text: 'Each ID indexes a table of ~4,096 numbers. The payoff: similar meanings sit near each other — Paris next to France, banana far away. Meaning has become distance, which is something a machine can compute with.',
+    text: 'Each ID indexes a learned vector—thousands of numbers in many models. It is a starting coordinate, not a dictionary definition; later layers turn it into a context-specific representation.',
   },
   {
     module: 'tokenpath', item: 'tp.prefill', title: 'Prefill: everything at once',
-    text: 'All five vectors enter together as one matrix and sweep through every layer side by side — one big, compute-hungry pass. Five tokens today; the same trick swallows a 100,000-token document.',
+    text: 'All five vectors can be processed in parallel through each layer—one compute-heavy prefill phase. Long documents use the same logical pattern, though serving systems often split them into chunks to control memory and latency.',
+    insight: 'Prompt length is a cost and latency variable. Retrieval and prompt design can create value by sending the model fewer, more relevant tokens.',
   },
   {
     module: 'tokenpath', item: 'tp.attnex', title: 'Attention finds France',
-    text: 'Inside each layer, every token looks back at the ones before it. Watch the arcs: processing " is", the model leans hardest on " France" (0.61) and " capital" (0.28). It now knows what’s being asked.',
+    text: 'Inside each layer, each position can attend to earlier positions. The arcs are illustrative: one head might place 0.61 on " France" and 0.28 on " capital", while other heads and layers learn different relationships.',
   },
   {
     module: 'tokenpath', item: 'tp.ffnex', title: 'The FFN adds the fact',
-    text: 'Then each token alone faces thousands of learned yes/no questions — "geography? a name coming? French context?" The yeses vote, and the vote nudges the vector toward Paris-ness. This is where knowledge lives.',
+    text: 'Then each position passes through a learned nonlinear transformation. “Geography?” and “a name coming?” are useful metaphors for features, not literal labeled neurons; the result nudges the representation toward a better continuation.',
   },
   {
     module: 'tokenpath', item: 'tp.cache', title: 'The cache fills behind it',
-    text: 'As the five tokens sweep through, each drops its keys and values into the KV cache — one slot per token, per layer. This is the receipt that means the prompt never has to be re-read.',
+    text: 'As the five tokens move through, each layer stores keys and values in the KV cache. Standard decode can reuse those states instead of recomputing the earlier prompt positions.',
   },
   {
     module: 'tokenpath', item: 'tp.ttft', title: 'The first token appears',
-    text: 'Out of the last layer, the position after " is" makes its prediction: " Paris". Everything you waited for so far — that was your time-to-first-token.',
+    text: 'After the final layer, the model scores the vocabulary and this illustration selects " Paris". Queueing, prefill, and the first decode step together determine the time to first token you perceive.',
+    insight: 'Time to first token is the responsiveness metric. Compare it at realistic prompt lengths, concurrency, and tail percentiles—not only on an idle chip.',
   },
   {
     module: 'tokenpath', item: 'tp.decode', title: 'Then the loop',
-    text: '" Paris" is appended and circles the track alone: attention reads the cache, the FFN re-runs, logits, sampler, append — one lap per token, every lap re-reading all the weights. The green dot is your answer being written.',
+    text: '" Paris" is appended and the newest position circles the track: attention reads the cache, the FFN runs, logits are filtered, and a token is selected. Standard generation advances one token per step; large weight tensors are often streamed from HBM each step.',
   },
   {
     module: 'tokenpath', item: 'tp.stream', title: '"Paris" reaches your screen',
@@ -53,7 +57,8 @@ export const TOUR: TourStep[] = [
   },
   {
     module: 'inference', title: 'Zoom out: you shared that GPU',
-    text: 'Here is the same second from the datacenter’s side: one GPU’s timetable. Every row is a user; solid blocks are prefill, ticks are decoded tokens, and the amber dot is "now". You are the third row.',
+    text: 'Here is the same interval from the operator’s side: one serving worker’s timetable. A worker may be one GPU or a model shard across several. Rows are users; solid blocks are prefill, ticks are decoded tokens, and the amber dot is "now".',
+    insight: 'The serving stack monetizes scarce accelerator time. The goal is useful tokens per dollar at a promised quality and latency.',
   },
   {
     module: 'inference', item: 'inf.you', title: 'Your thin row',
@@ -61,19 +66,20 @@ export const TOUR: TourStep[] = [
   },
   {
     module: 'inference', item: 'inf.chunked', title: 'Bob never stalled you',
-    text: 'The row above you is Bob, who pasted a 100,000-token PDF. His enormous prefill is sliced into chunks slotted between everyone’s ticks — his document costs him latency, never you.',
+    text: 'The row above is Bob, who pasted a 100,000-token PDF. A scheduler can split his prefill into chunks and prioritize decode between them, reducing—but not eliminating—interference with interactive users.',
   },
   {
     module: 'inference', item: 'inf.contbatch', title: 'No slot ever idles',
-    text: 'Top row: Alice’s haiku finished mid-timeline, and Dana’s request took over her slot on the very next tick. Continuous batching is why a serving GPU never waits for a "batch" to drain.',
+    text: 'Top row: Alice’s haiku finishes mid-timeline and Dana can join on a later scheduler step. Continuous batching avoids waiting for a fixed batch to drain and helps keep the worker productive.',
   },
   {
     module: 'inference', item: 'inf.kvmem', title: 'Your pages on the board',
-    text: 'And your KV cache? It lives here, in fixed-size pages next to everyone else’s — Bob owns most of the board, Alice’s freed pages sit outlined, and yours grow by one slot per tick.',
+    text: 'And your KV cache? A paged serving system stores it in fixed-size blocks alongside other requests. Bob uses many blocks, Alice’s can be reclaimed when she finishes, and yours grows as output tokens arrive.',
   },
   {
     module: 'memory', item: 'mem.inpkg', title: 'Where those pages physically are',
-    text: 'Those pages are not an abstraction. They are charge in DRAM towers stacked beside the die — along with ~180 GB of weights that streamed through the compute units on every single tick of your row.',
+    text: 'Those pages are physical bits in HBM stacks beside the compute dies, sharing capacity and bandwidth with model weights and intermediate data. Their exact footprint depends on the model architecture, precision, context, and batch.',
+    insight: 'HBM is both warehouse and highway. Capacity determines what fits; bandwidth helps determine how quickly it can run.',
   },
   {
     module: 'memory', item: 'mem.onchip', title: 'Where the math happened',
@@ -81,14 +87,15 @@ export const TOUR: TourStep[] = [
   },
   {
     module: 'memory', item: 'mem.system', title: 'The slow floors below',
-    text: 'Below HBM, the staircase keeps going: DIMM slots, NVMe sticks, a CXL card. The model’s checkpoint loaded from those sticks this morning; if HBM ever fills, pages spill down the dashed path — and every tick feels it.',
+    text: 'Below HBM, the staircase keeps going: host DRAM, NVMe, and potentially CXL-attached memory. Checkpoints may load from storage; offloading can extend capacity, but slower tiers usually add a visible latency or throughput cost.',
   },
   {
     module: 'rack', item: 'rk.gpu', title: 'The physical object',
-    text: 'All of it — your arcs, ticks, and pages — happened on this: two reticle-limit dies bridged into one GPU, ringed by eight HBM towers, drinking over a thousand amps under a liquid cold plate.',
+    text: 'In this GB200 example, computation lands on a Blackwell GPU with two reticle-scale dies joined in-package, surrounded by HBM and cooled by a liquid cold plate. Other inference systems use different accelerators and packaging.',
   },
   {
     module: 'rack', item: 'rk.rack', title: 'And the machine it lives in',
-    text: 'That GPU is one of 72 in the rack, wired into one machine by 5,000 copper cables and cooled by 132 kW of flowing liquid. One sentence, one second, one rack. That’s inference — now go drill it.',
+    text: 'That GPU is one of 72 in a DGX GB200 NVL72, connected through more than 5,000 copper cables in a rack drawing roughly 120 kW. One tiny request consumed a slice of a much larger shared system. That is inference—now go drill it.',
+    insight: 'At this density, power delivery, cooling, commissioning, and network readiness can constrain deployable capacity as surely as chip supply.',
   },
 ]

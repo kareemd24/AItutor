@@ -1,6 +1,6 @@
 import type { ModuleDef, Shape } from '../types'
 
-// The serving story, told through one GPU's timetable. Your request — the
+// The serving story, told through one worker's timetable. Your request — the
 // same "The capital of France is" from The Journey of a Token — shares the
 // GPU with Alice's haiku and Bob's 100k-token PDF. Rows are users; solid
 // blocks are prefill; ticks are decode, one token each. A paged KV board
@@ -152,7 +152,7 @@ const engineArt: Shape[] = [
 export const inference: ModuleDef = {
   id: 'inference',
   title: 'The Inference Stack',
-  tagline: 'One GPU, four users: your "capital of France" request on the serving timetable, tick by tick.',
+  tagline: 'One serving worker, four users: prompt bursts and decode ticks sharing the same expensive capacity.',
   world: { w: 1000, h: 620 },
   flows: [
     // the "now" playhead sweeping the timetable
@@ -167,16 +167,16 @@ export const inference: ModuleDef = {
   ],
   items: [
     {
-      id: 'inf.timeline', name: 'One GPU, four users', kind: 'container', zone: 'The timetable',
+      id: 'inf.timeline', name: 'One worker, four users', kind: 'container', zone: 'The timetable',
       x: 350, y: 170, w: 640, h: 270, art: timelineArt,
-      note: 'A serving GPU runs many conversations at once. Each row is a user; solid blocks are prefill, ticks are decode — one token per tick. The amber dot is "now".',
+      note: 'A serving worker runs many conversations at once; it may be one GPU or a model shard across several. Solid blocks are prefill, ticks are standard decode steps, and the amber dot is “now”.',
     },
     { id: 'inf.you', name: 'Your request', kind: 'atom', parent: 'inf.timeline', zone: 'The timetable', x: 62, y: 208, hitR: 28,
       note: '"The capital of France is" — the same sentence from The Journey of a Token, now seen from the datacenter’s side: one thin row on a shared GPU.' },
     { id: 'inf.bigdoc', name: 'The 100k-token request', kind: 'atom', parent: 'inf.timeline', zone: 'The timetable', x: 62, y: 137, hitR: 28,
-      note: 'Bob pasted an entire PDF. His prefill alone is more compute than your whole conversation — the scheduler’s job is making sure you never feel it.' },
+      note: 'Bob pasted an entire PDF. His prefill can require far more compute than a short chat; the scheduler’s job is to limit the latency impact on other requests.' },
     { id: 'inf.prefix', name: 'Prefix cache (sys)', kind: 'atom', parent: 'inf.timeline', zone: 'The timetable', x: 103, y: 121, hitR: 18,
-      note: 'Every row starts with the same system prompt — the faded "sys" block. Its KV was computed once, ever; each new request just points at it.' },
+      note: 'Every row shares the same faded “sys” prefix. When automatic prefix caching is enabled and the exact prefix is still resident, requests can reuse its KV blocks instead of recomputing them.' },
     { id: 'inf.prefill', name: 'Prefill burst', kind: 'atom', parent: 'inf.timeline', zone: 'The timetable', x: 333, y: 182, hitR: 15, ldy: 20,
       note: 'Your 5 tokens are one short compute burst (the solid block). Prefill cost scales with prompt length — compare Bob’s.',
       role: 'runs your whole prompt in one solid burst of compute' },
@@ -187,10 +187,10 @@ export const inference: ModuleDef = {
     { id: 'inf.tpot', name: 'Inter-token latency', kind: 'atom', parent: 'inf.timeline', zone: 'The timetable', x: 590, y: 222, hitR: 30,
       note: 'The gap between ticks — tens of milliseconds on a healthy stack. This, not TTFT, is the "tokens per second" you watch.' },
     { id: 'inf.chunked', name: 'Chunked prefill', kind: 'atom', parent: 'inf.timeline', zone: 'The timetable', x: 350, y: 150, hitR: 70,
-      note: 'Bob’s giant prefill is sliced into chunks (the repeating blocks) slotted between everyone’s decode ticks — his PDF costs him latency, never you.',
+      note: 'Bob’s giant prefill is split into chunks that can be scheduled around decode work. Prioritizing decode reduces—but does not eliminate—its interference with other users.',
       role: 'slices a huge prompt into pieces so it can’t stall other users' },
     { id: 'inf.contbatch', name: 'Continuous batching', kind: 'atom', parent: 'inf.timeline', zone: 'The timetable', x: 452, y: 105, hitR: 30,
-      note: 'Alice’s haiku finished mid-timeline — Dana’s request takes over her row on the very next tick. The GPU never waits for a "batch" to drain.',
+      note: 'Alice’s haiku finishes mid-timeline and Dana can join on a later scheduler step. Continuous batching avoids waiting for a fixed batch to drain and helps reduce idle capacity.',
       role: 'hands a finished user’s slot to a new request on the next tick' },
 
     {
@@ -199,7 +199,7 @@ export const inference: ModuleDef = {
       note: 'The GPU’s KV cache as PagedAttention sees it: fixed-size pages, allocated on demand, color = owner. Bob’s PDF owns most of the board.',
     },
     { id: 'inf.paged', name: 'PagedAttention', kind: 'atom', parent: 'inf.kvmem', zone: 'The timetable', x: 845, y: 130, hitR: 75,
-      note: 'Cache lives in scattered fixed-size pages like OS virtual memory — no big reserved slabs. Before vLLM introduced this, most KV memory was wasted to fragmentation.',
+      note: 'Cache lives in fixed-size blocks that can occupy non-contiguous physical memory, like virtual-memory paging. The vLLM paper reports near-zero KV waste in its evaluated system and 2–4× throughput versus its baselines—not a universal multiplier.',
       role: 'manages the KV cache in pages the way an OS manages virtual memory' },
     { id: 'inf.kvgrow', name: 'Pages grow per tick', kind: 'atom', parent: 'inf.kvmem', zone: 'The timetable', x: 845, y: 245, hitR: 75,
       note: 'Every decode tick appends K/V; when a page fills, a new one is grabbed from the free pool. Alice’s outlined pages were freed the moment she finished.' },
@@ -215,7 +215,7 @@ export const inference: ModuleDef = {
     { id: 'inf.verify', name: 'Verification pass', kind: 'atom', parent: 'inf.spec', zone: 'Going faster', x: 161, y: 479, hitR: 38, ldy: 30, ldx: -50,
       note: 'The ~400B target scores all three guesses in a single parallel pass — the same trick as prefill. Rejection sampling keeps the output distribution exactly its own.' },
     { id: 'inf.accept', name: 'Acceptance rate', kind: 'atom', parent: 'inf.spec', zone: 'Going faster', x: 300, y: 520, hitR: 55,
-      note: 'Two of three kept → this lap produced " Paris." for the cost of one. Typical stacks accept ~60–80% and land 2–3× faster overall.' },
+      note: 'Two of three kept in this illustration, so the target advances multiple tokens. Published speculative-sampling results reached roughly 2–2.5× on one large-model setup; real gains depend on acceptance rate and draft cost.' },
 
     {
       id: 'inf.engine', name: 'Inside one decode tick', kind: 'container', zone: 'Going faster',
@@ -223,12 +223,12 @@ export const inference: ModuleDef = {
       note: 'Zoom into any single tick of the timetable and this is what’s happening in those few milliseconds.',
     },
     { id: 'inf.wstream', name: 'Weight streaming', kind: 'atom', parent: 'inf.engine', zone: 'Going faster', x: 614, y: 389, hitR: 42, ldy: 46, ldx: -60,
-      note: 'To emit one token, essentially every weight travels HBM → SMs. A 180 GB model over ~8 TB/s ≈ 20 ms — the physics that sets your tick rate.',
+      note: 'At small batches, a decode step may be dominated by moving a model’s weight bytes through HBM. A 180 GB payload divided by an 8 TB/s peak is ~23 ms before efficiency and system overheads—an illustrative lower bound, not a forecast.',
       role: 'moves every weight from HBM to the compute units, every tick' },
     { id: 'inf.flash', name: 'FlashAttention', kind: 'atom', parent: 'inf.engine', zone: 'Going faster', x: 855, y: 389, hitR: 60,
-      note: 'Attention computed tile-by-tile inside on-chip SRAM, never materializing the full score matrix in HBM — 2–4× faster, memory linear not quadratic.' },
+      note: 'FlashAttention tiles exact attention through on-chip SRAM instead of materializing the full score matrix in HBM. It reduces memory traffic and auxiliary memory; speedup depends on sequence length, hardware, and kernel generation.' },
     { id: 'inf.quant', name: 'Quantization (FP8/INT4)', kind: 'atom', parent: 'inf.engine', zone: 'Going faster', x: 610, y: 513, hitR: 50, ldy: -26, ldx: -60,
-      note: 'Same weights, fewer bytes: FP8 halves what streams per tick, so bandwidth-bound decode speeds up almost linearly. The bars are the whole argument.' },
+      note: 'Lower-precision weights use fewer bytes, so bandwidth-bound decode can speed up and fit larger batches. Gains are not automatically linear: kernels, scaling overhead, outliers, and quality constraints matter.' },
     { id: 'inf.disagg', name: 'Disaggregated serving', kind: 'atom', parent: 'inf.engine', zone: 'Going faster', x: 856, y: 492, hitR: 60, ldy: 36, ldx: -80,
       note: 'Split the fleet: burst-shaped GPUs do prefill, drumbeat-shaped GPUs do decode, and requests hand off between pools — each phase on hardware shaped for it.' },
   ],

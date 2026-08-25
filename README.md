@@ -1,27 +1,33 @@
-# ChipMap
+# ChipMap — Investor Edition
 
 Learn AI & semiconductor concepts the way you learn a map: **every idea has a
 place, and tapping the place is the answer.** Built from the
 [MyMapTap playbook](https://github.com/kareemd24/mymaptap) — the geography swapped
 for hand-designed concept layouts, everything downstream kept.
 
+The investor edition adds a plain-language thesis, diligence question, key
+metrics, generation-specific caveats, and primary sources to every module. A
+global concept finder jumps directly to any term on its map, while selected
+concepts add an **Investor lens** connecting the mechanism to latency, unit
+economics, supply, utilization, or defensibility.
+
 ## The modules
 
 | Module | What you learn |
 |---|---|
-| **The Journey of a Token** | A real worked example — "The capital of France is" → " Paris" — with actual token chips, live attention weights, a logit bar chart, and a KV cache that grows a slot per lap |
-| **Inside a GPU Rack** | A real GB200 NVL72: 18 compute trays (2 Bianca boards each), 9 NVSwitch trays, 33 kW power shelves, coolant manifolds and the 5,000-cable copper NVLink spine — exploding down to one Blackwell module |
+| **The Journey of a Token** | A clearly labeled worked example — "The capital of France is" → " Paris" — with token chips, illustrative attention weights and logits, and a KV cache that grows each decode step |
+| **Inside a GPU Rack** | A DGX GB200 NVL72: 18 compute trays, 9 NVSwitch trays, eight redundant 33 kW power shelves, coolant manifolds, and the 5,000+ cable copper NVLink spine — exploding down to one Blackwell module |
 | **The Transformer, Block by Block** | Tokenizer → embeddings → attention (Q/K/V, scores, KV cache, GQA) → FFN (up/gate/down, MoE) → output head, hung on the residual spine |
-| **The Inference Stack** | Prefill vs decode, TTFT vs inter-token latency, speculative decoding (draft → verify → acceptance), continuous batching, PagedAttention, FlashAttention, quantization |
+| **The Inference Stack** | Prefill vs decode, TTFT vs inter-token latency, prefix caching, speculative decoding, continuous batching, PagedAttention, FlashAttention, quantization, and serving trade-offs |
 | **The Training Pipeline** | One example's story: "…France is Paris" guessed (Paris 0.42), scored (−log 0.42), backpropagated and nudged — then SFT/RLHF/DPO/RLVR post-training and the distributed machinery |
-| **Silicon: GPUs, ASICs & Packaging** | An H100-style floorplan (SM banks, the split 50 MB L2, HBM PHYs), a TPU-style 128×128 systolic array, and a CoWoS package cross-section |
+| **Silicon: GPUs, ASICs & Packaging** | An H100-style floorplan (SM banks, 50 MB L2, HBM PHYs), a TPU-v3-style 128×128 systolic array, and a CoWoS package cross-section |
 | **The Memory Hierarchy** | Registers → SRAM → HBM → DDR → NVMe as a staircase, plus the physics: arithmetic intensity, the memory wall, bandwidth vs capacity |
 | **The AI Datacenter & Optical Networking** | NVLink/NVSwitch scale-up vs InfiniBand/RoCE scale-out, Clos fabrics, and inside the optics: lasers, modulators, DSPs, silicon photonics, CPO, LPO |
 
 **The Grand Tour** (`#/tour`) is a guided narrative that follows one request —
 "The capital of France is" — across four modules in 20 steps: through the
-model, across the serving GPU's timetable, into physical memory, down to the
-rack.
+model, across a serving worker's timetable, into physical memory, and down to
+the rack. Worked values are explicitly marked as illustrative.
 
 ## The game
 

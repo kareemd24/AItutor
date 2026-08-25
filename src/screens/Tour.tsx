@@ -37,7 +37,9 @@ export default function Tour() {
           <span className="kind-badge atom">step {idx + 1}</span>
           <h3>{step.title}</h3>
         </div>
+        <div className="tour-example-label"><span>Worked illustration</span> Exact tokens and values vary by model and serving stack.</div>
         <p className="note">{step.text}</p>
+        {step.insight && <div className="investor-lens"><span>Investor lens</span><p>{step.insight}</p></div>}
         <div className="panel-actions">
           <button className="ghost-btn" disabled={idx === 0} onClick={() => setIdx(i => i - 1)}>
             ← Back

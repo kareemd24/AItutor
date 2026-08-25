@@ -1,10 +1,9 @@
 import type { ModuleDef, Shape } from '../types'
 
-// Modeled on a real GB200 NVL72 rack (per NVIDIA/HPE specs and SemiAnalysis
-// coverage): 18 1U compute trays (2 Bianca boards each), 9 NVSwitch trays in
-// the middle, 33 kW power shelves on a DC busbar, side coolant manifolds, and
-// a 5,000+ cable passive-copper NVLink spine. Exploded views pull one compute
-// tray and one Blackwell GPU module out; fine detail appears as you zoom.
+// Modeled on NVIDIA's DGX GB200 NVL72 hardware guide and OCP contribution:
+// 18 1U compute trays (2 Bianca boards each), 9 NVSwitch trays, redundant
+// 33 kW power shelves on a DC busbar, coolant manifolds, and a 5,000+ cable
+// passive-copper NVLink spine. Exploded views are intentionally schematic.
 
 const sky = (a: number) => `hsla(199,90%,65%,${a})`
 const violet = (a: number) => `hsla(262,75%,70%,${a})`
@@ -30,12 +29,12 @@ const rackArt: Shape[] = [
   ...Array.from({ length: 11 }, (_, i): Shape => (
     { t: 'rect', x: 94 + i * 18, y: 62, w: 8, h: 7, f: amber(0.55), lod: 1.6 }
   )),
-  // power shelves (6 shelves drawn as 3 rows of 2)
-  ...Array.from({ length: 3 }, (_, i): Shape => (
-    { t: 'rect', x: 86, y: 80 + i * 16, w: 204, h: 13, r: 2, f: rose(0.15), s: rose(0.5), lw: 1.1 }
+  // eight redundant 33 kW power shelves, shown as four paired rows
+  ...Array.from({ length: 4 }, (_, i): Shape => (
+    { t: 'rect', x: 86, y: 80 + i * 12, w: 204, h: 10, r: 2, f: rose(0.15), s: rose(0.5), lw: 1.1 }
   )),
-  ...Array.from({ length: 6 }, (_, i): Shape => (
-    { t: 'rect', x: 92 + (i % 2) * 100, y: 83 + Math.floor(i / 2) * 16, w: 88, h: 7, s: rose(0.45), lw: 0.8, lod: 1.9 }
+  ...Array.from({ length: 8 }, (_, i): Shape => (
+    { t: 'rect', x: 92 + (i % 2) * 100, y: 82 + Math.floor(i / 2) * 12, w: 88, h: 6, s: rose(0.45), lw: 0.8, lod: 1.9 }
   )),
   // 10 compute trays (upper bank)
   ...Array.from({ length: 10 }, (_, i): Shape => (
@@ -141,7 +140,7 @@ const gpuArt: Shape[] = [
 export const rack: ModuleDef = {
   id: 'rack',
   title: 'Inside a GPU Rack',
-  tagline: 'A real GB200 NVL72, drawn to scale-ish: 72 GPUs, 9 switch trays, 132 kW — zoom all the way into one Blackwell.',
+  tagline: 'A DGX GB200 NVL72: 72 GPUs, 9 switch trays, and roughly 120 kW—zoom from rack to package.',
   world: { w: 1000, h: 620 },
   art: [
     // leader lines: one compute tray pulls out; one Blackwell pulls out of it
@@ -163,7 +162,7 @@ export const rack: ModuleDef = {
     {
       id: 'rk.rack', name: 'GB200 NVL72 rack', kind: 'container', zone: 'The rack',
       x: 200, y: 320, w: 270, h: 550, art: rackArt,
-      note: '72 Blackwell GPUs and 36 Grace CPUs wired into a single NVLink domain — one 132 kW computer that happens to be rack-shaped.',
+      note: '72 Blackwell GPUs and 36 Grace CPUs connected in one NVLink domain—a rack-scale system drawing approximately 120 kW in NVIDIA’s hardware guide.',
     },
     { id: 'rk.uplinks', name: 'Fiber uplinks', kind: 'atom', parent: 'rk.rack', zone: 'The rack', x: 122, y: 49, hitR: 22, ldy: -13,
       note: 'Everything inside the rack talks copper; these fibers heading for the leaf/spine fabric are where light takes over.' },
@@ -171,19 +170,19 @@ export const rack: ModuleDef = {
       note: 'The scale-out network switches: every tray’s NICs converge here, one hop before the spine. Zoom in to see the ports.',
       role: 'gathers every tray’s network links one hop before the spine' },
     { id: 'rk.power', name: 'Power shelves', kind: 'atom', parent: 'rk.rack', zone: 'The rack', x: 188, y: 103, hitR: 28,
-      note: 'Six 33 kW rectifier shelves feeding the busbar. The rack draws 132 kW nominal — roughly a hundred homes’ worth.' },
+      note: 'Eight 33 kW power shelves use N+N redundancy to feed the DC busbar. Installed power capacity is not the same as the rack’s approximately 120 kW operating draw.' },
     { id: 'rk.busbar', name: 'DC busbar', kind: 'atom', parent: 'rk.rack', zone: 'The rack', x: 310, y: 210, hitR: 16,
       note: 'A solid copper bar down the back; every tray blind-mates onto it as it slides in — there are no power cables inside the rack.',
       role: 'distributes DC power down the rack so trays need no power cables' },
     { id: 'rk.nvswtray', name: 'NVSwitch trays (×9)', kind: 'atom', parent: 'rk.rack', zone: 'The rack', x: 188, y: 368, hitR: 45,
-      note: 'Nine trays in the middle of the rack, two 28.8 Tb/s NVSwitch chips each — together, 130 TB/s of any-to-any bandwidth for all 72 GPUs.',
+      note: 'Nine 1U trays, each with two NVSwitch chips, create the 72-GPU NVLink domain. NVIDIA rates the system at 130 TB/s of aggregate GPU communication bandwidth.',
       role: 'gives all 72 GPUs any-to-any bandwidth from the middle of the rack' },
     { id: 'rk.backplane', name: 'Copper NVLink spine', kind: 'atom', parent: 'rk.rack', zone: 'The rack', x: 298, y: 480, hitR: 16,
-      note: 'Cartridges holding 5,000+ passive copper cables that wire every GPU to every switch tray. Choosing copper over optics saves ~20 kW per rack.',
+      note: 'Cartridges hold more than 5,000 passive copper cables between GPUs and switch trays. At this short reach, copper avoids the power and conversion overhead of thousands of optical links.',
       role: 'wires every GPU to every switch tray through 5,000+ copper cables' },
     { id: 'rk.manifold', name: 'Coolant manifolds', kind: 'atom', parent: 'rk.rack', zone: 'The rack', x: 76, y: 320, hitR: 20, lalign: 'right' as const,
-      note: 'Vertical pipes with a quick-connect per tray: liquid enters near 25 °C, leaves above 45 °C, carrying most of the 132 kW away.',
-      role: 'carries the liquid that removes most of the rack’s 132 kW of heat' },
+      note: 'Supply and return manifolds use blind-mate quick-connects at each liquid-cooled tray. Facility-water temperatures and captured heat vary by deployment.',
+      role: 'carries liquid that removes most of the rack’s heat' },
 
     {
       id: 'rk.tray', name: 'Compute tray (exploded)', kind: 'container', zone: 'Inside a compute tray',
@@ -195,7 +194,7 @@ export const rack: ModuleDef = {
     { id: 'rk.grace', name: 'Grace CPU', kind: 'atom', parent: 'rk.tray', zone: 'Inside a compute tray', x: 476, y: 126, hitR: 24, lod: 1.15,
       note: 'NVIDIA’s ARM server CPU: data loading, checkpoints, and a second memory pool the GPUs can borrow over NVLink-C2C.' },
     { id: 'rk.lpddr', name: 'LPDDR5X', kind: 'atom', parent: 'rk.tray', zone: 'Inside a compute tray', x: 480, y: 160, hitR: 14, lod: 1.4,
-      note: 'Up to ~480 GB soldered around each Grace — slower than HBM, but a big spillover pool one hop from the GPUs.' },
+      note: 'Up to about 500 GB of LPDDR5X per Grace in the reference configuration—slower than HBM, but a large coherent memory pool one C2C link away.' },
     { id: 'rk.nic', name: 'ConnectX NICs', kind: 'atom', parent: 'rk.tray', zone: 'Inside a compute tray', x: 535, y: 232, hitR: 70, lod: 1.15,
       note: 'The tray’s front-panel on-ramp to the scale-out network — roughly one 400G port per GPU, all RDMA.',
       role: 'gives each GPU its own RDMA on-ramp to the cluster network' },
@@ -213,7 +212,7 @@ export const rack: ModuleDef = {
       note: 'Two reticle-limit dies stitched by a 10 TB/s bridge (NV-HBI) so software sees one GPU — the workaround for lithography’s ~830 mm² ceiling.',
       role: 'the two bridged squares of silicon the whole rack exists to feed' },
     { id: 'rk.hbm', name: 'HBM3e stacks (×8)', kind: 'atom', parent: 'rk.gpu', zone: 'Inside a Blackwell GPU', x: 764, y: 440, hitR: 32, lod: 1.3,
-      note: '192 GB at ~8 TB/s, arranged like a moat around the dies — this is where the model’s weights and KV cache actually live.' },
+      note: 'Up to 180 GB on the B200 configuration, arranged around the compute dies. Exact capacity and bandwidth vary across Blackwell products; weights and KV cache share this local pool.' },
     { id: 'rk.vrm', name: 'VRM (power stages)', kind: 'atom', parent: 'rk.gpu', zone: 'Inside a Blackwell GPU', x: 872, y: 430, hitR: 32, lod: 1.3,
       note: 'Regulators turning busbar DC into ~1 V at well over a thousand amps, millimeters from the dies so nothing is lost on the way.',
       role: 'steps power down to ~1 V at over a thousand amps beside the dies' },

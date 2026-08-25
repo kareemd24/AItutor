@@ -38,7 +38,7 @@ export default function App() {
       const mode = parts[2] as Mode | undefined
       if (mode && MODES.includes(mode)) {
         // key forces a clean remount when mode or module changes
-        return <Play key={`${mod.id}:${mode}`} mod={mod} mode={mode} />
+        return <Play key={`${mod.id}:${mode}:${parts[3] ?? ''}`} mod={mod} mode={mode} initialItemId={parts[3]} />
       }
       return <ModuleSetup mod={mod} />
     }

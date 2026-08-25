@@ -100,13 +100,13 @@ const pkgArt: Shape[] = [
 export const silicon: ModuleDef = {
   id: 'silicon',
   title: 'Silicon: GPUs, ASICs & Packaging',
-  tagline: 'Real floorplans: an H100-style die, a TPU-style systolic array, and a CoWoS package in cross-section.',
+  tagline: 'Concrete design patterns: an H100-style GPU, a TPU-v3-style systolic array, and a CoWoS package cross-section.',
   world: { w: 1000, h: 620 },
   items: [
     {
       id: 'si.gpu', name: 'GPU die', kind: 'container', zone: 'Two philosophies',
       x: 260, y: 200, w: 400, h: 300, art: gpuArt,
-      note: 'The general-purpose answer, H100 edition: 814 mm² holding 132 streaming multiprocessors around a shared L2 — programmable for anything, dominant in AI.',
+      note: 'The programmable answer, H100 SXM edition: an 814 mm² die with 132 enabled streaming multiprocessors and 50 MB of L2. GPU value also comes from software and workload breadth.' ,
     },
     { id: 'si.sm', name: 'Streaming multiprocessor (SM)', kind: 'atom', parent: 'si.gpu', zone: 'Two philosophies', x: 150, y: 122, hitR: 30, ldy: -24,
       note: 'The repeated tile — 132 copies on an H100. Each has its own 256 KB register file, scratchpad, and four tensor cores; kernels are sliced to fill them all.' },
@@ -125,8 +125,8 @@ export const silicon: ModuleDef = {
     {
       id: 'si.asic', name: 'AI ASIC (TPU-style)', kind: 'container', zone: 'Two philosophies',
       x: 740, y: 200, w: 400, h: 300, art: asicArt,
-      note: 'The specialized answer: a chip organized around one huge matrix engine — trading flexibility for efficiency and cost per FLOP.',
-      role: 'trades flexibility for efficiency by targeting a single workload',
+      note: 'The specialized answer: a chip organized around large matrix engines, trading some generality for efficiency on targeted machine-learning workloads.',
+      role: 'targets machine-learning workloads with a more specialized dataflow',
     },
     { id: 'si.systolic', name: 'Systolic array', kind: 'atom', parent: 'si.asic', zone: 'Two philosophies', x: 690, y: 182, hitR: 70,
       note: 'A 128×128 lockstep grid — 16,384 multiply-accumulates per clock. Weights load from the top, data marches in from the left, results pulse out like a heartbeat.',
@@ -144,7 +144,7 @@ export const silicon: ModuleDef = {
       note: 'A CoWoS package in cross-section: compute die and HBM towers on a silicon interposer, on a substrate, on the board — packaging is now half the performance story.',
     },
     { id: 'si.hbm', name: 'HBM stack', kind: 'atom', parent: 'si.pkg', zone: 'Putting it together', x: 267, y: 470, hitR: 35, lalign: 'right' as const,
-      note: 'DRAM dies stacked on a logic die. H100 runs five active stacks for 80 GB at 3.35 TB/s; Blackwell runs eight for 192 GB at ~8 TB/s.',
+      note: 'DRAM dies stacked beside compute. H100 SXM uses five active HBM3 stacks for 80 GB at 3.35 TB/s; B200 products provide up to 180 GB, with bandwidth depending on the exact Blackwell configuration.',
       role: 'stacks DRAM beside the compute die to hold weights and KV cache' },
     { id: 'si.tsv', name: 'Through-silicon vias', kind: 'atom', parent: 'si.pkg', zone: 'Putting it together', x: 337, y: 470, hitR: 25, ldy: -34,
       note: 'Vertical wires drilled straight through the stacked DRAM dies — zoom into a tower to see them. The reason HBM is a tower, not a sprawl.' },
@@ -156,6 +156,6 @@ export const silicon: ModuleDef = {
     { id: 'si.reticle', name: 'Reticle limit', kind: 'atom', parent: 'si.pkg', zone: 'Putting it together', x: 700, y: 408,
       note: '~830 mm² — the largest die one lithography exposure can print. H100 sits just under it; Blackwell answers it with two bridged dies.' },
     { id: 'si.wafer', name: 'Wafer-scale integration', kind: 'atom', parent: 'si.pkg', zone: 'Putting it together', x: 850, y: 408,
-      note: 'Skip dicing entirely and use the whole 300 mm wafer as one chip (Cerebras) — no off-chip hops, at the price of heroic yield and cooling tricks.' },
+      note: 'Use most of a 300 mm wafer as one system (the Cerebras approach), reducing off-chip communication while requiring defect tolerance, specialized packaging, power delivery, and cooling.' },
   ],
 }

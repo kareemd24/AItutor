@@ -7,6 +7,7 @@ import {
   pickPrompt, type Prompt, type Verdict,
 } from '../game/engine'
 import { getProgress, recordResult } from '../lib/progress'
+import { investorNoteFor } from '../data/guides'
 
 declare global {
   interface Window {
@@ -19,6 +20,7 @@ declare global {
 interface Props {
   mod: ModuleDef
   mode: Mode
+  initialItemId?: string
 }
 
 interface Answered {
@@ -28,7 +30,7 @@ interface Answered {
 
 const SPRINT_SECONDS = 60
 
-export default function Play({ mod, mode }: Props) {
+export default function Play({ mod, mode, initialItemId }: Props) {
   const scale = useMemo(() => moduleScale(mod), [mod])
   const tour = useMemo(() => buildLearnTour(mod), [mod])
   const reviewQueue = useMemo(
@@ -40,7 +42,9 @@ export default function Play({ mod, mode }: Props) {
   const [tourIdx, setTourIdx] = useState(0)
 
   // explore
-  const [selId, setSelId] = useState<string | null>(null)
+  const [selId, setSelId] = useState<string | null>(
+    initialItemId && mod.items.some(item => item.id === initialItemId) ? initialItemId : null,
+  )
 
   // "zoom in" nudge when the current target is hidden behind a zoom threshold
   const [zoomHint, setZoomHint] = useState(false)
@@ -207,7 +211,7 @@ export default function Play({ mod, mode }: Props) {
                 <span className={`kind-badge ${sel.kind}`}>{sel.kind === 'container' ? 'region' : 'component'}</span>
                 <h3>{sel.name}</h3>
               </div>
-              <p className="note">{sel.note}</p>
+              <ConceptCopy item={sel} />
             </>
           ) : (
             <p className="note">
@@ -236,7 +240,7 @@ export default function Play({ mod, mode }: Props) {
               <span className={`kind-badge ${cur.kind}`}>{cur.kind === 'container' ? 'region' : 'concept'}</span>
               <h3>{cur.name}</h3>
             </div>
-            <p className="note">{cur.note}</p>
+            <ConceptCopy item={cur} />
             <div className="panel-actions">
               <button className="ghost-btn" disabled={tourIdx === 0} onClick={() => setTourIdx(i => i - 1)}>
                 ← Back
@@ -340,6 +344,9 @@ export default function Play({ mod, mode }: Props) {
             <span className="points">+{verdict.points}</span>
           </div>
           <p className="note">{verdict.note}</p>
+          {prompt && investorNoteFor(prompt.item.id) && (
+            <div className="investor-lens"><span>Investor lens</span><p>{investorNoteFor(prompt.item.id)}</p></div>
+          )}
           {mode !== 'sprint' && (
             <div className="panel-actions">
               <button className="primary-btn" data-testid="next-btn" onClick={advance}>
@@ -350,6 +357,16 @@ export default function Play({ mod, mode }: Props) {
         </div>
       )}
     </div>
+  )
+}
+
+function ConceptCopy({ item }: { item: Item }) {
+  const investorNote = investorNoteFor(item.id)
+  return (
+    <>
+      <p className="note">{item.note}</p>
+      {investorNote && <div className="investor-lens"><span>Investor lens</span><p>{investorNote}</p></div>}
+    </>
   )
 }
 
