@@ -16,8 +16,11 @@ remember. A global concept finder jumps directly to any term on its map.
 Lessons use a focused split-screen workspace: one concept-specific causal visual
 on the left, and a large, scrollable explanation on the right. All 168 steps own
 their own visual story—flow, loop, comparison, stack, network, or matrix—rather
-than reusing a decorative module panorama. The Analogy/Diagram choice persists
-as the learner advances or moves into the Grand Tour.
+than reusing a decorative module panorama. Every beat explicitly identifies
+what starts the process, what changes, what is saved, and what result emerges;
+the FFN and prefill scenes use familiar paper-and-office objects instead of
+abstract sci-fi machinery. The Analogy/Diagram choice persists as the learner
+advances or moves into the Grand Tour.
 
 ## The modules
 

@@ -184,6 +184,9 @@ async function run() {
       seen.add(t.id)
       const scene = page.locator('.concept-scene')
       if (await scene.count() !== 1) fail(`learn step ${t.id} has no concept-specific visual`)
+      if (await scene.locator('.scene-beat-meta, .scene-image-key em').count() === 0) {
+        fail(`learn step ${t.id} does not explain which visual beats are input, action, memory, or result`)
+      }
       visualTitles.add(await scene.locator('figcaption strong').textContent())
       if (i === 2) await page.getByRole('button', { name: 'Diagram' }).click()
       const next = page.locator('[data-testid="learn-next"]')
@@ -336,6 +339,20 @@ async function run() {
     await pp.goto(base, { waitUntil: 'networkidle' })
     await checkOverflow(pp, 'home@390')
     await shot(pp, 'phone-home')
+    await pp.goto(`${base}#/m/tokenpath/learn`, { waitUntil: 'networkidle' })
+    await pp.waitForSelector('[data-testid="learn-card"]')
+    for (let i = 0; i < 4; i++) await pp.locator('[data-testid="learn-next"]').click()
+    await pp.waitForSelector('img[alt*="THE CAPITAL OF FRANCE IS"]')
+    const prefillImage = await pp.locator('.scene-illustration img').evaluate(img => ({
+      width: img.clientWidth,
+      height: img.clientHeight,
+      loaded: img.complete && img.naturalWidth > 0,
+    }))
+    if (!prefillImage.loaded || prefillImage.width < 250 || prefillImage.height < 100) {
+      fail(`mobile prefill visual is not reconstructable at a glance: ${JSON.stringify(prefillImage)}`)
+    }
+    await checkOverflow(pp, 'prefill-learn@390')
+    await shot(pp, 'phone-prefill-learn')
     await pp.goto(`${base}#/m/transformer/learn`, { waitUntil: 'networkidle' })
     await pp.waitForSelector('[data-testid="learn-card"]')
     for (let i = 0; i < 10; i++) await pp.locator('[data-testid="learn-next"]').click()
