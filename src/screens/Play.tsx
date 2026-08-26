@@ -4,10 +4,11 @@ import type { Mark } from '../canvas/ConceptMap'
 import ConceptMap from '../canvas/ConceptMap'
 import {
   buildLearnTour, buildReviewQueue, drillLength, grade, moduleScale,
-  pickPrompt, type Prompt, type Verdict,
+  makePrompt, pickPrompt, type Prompt, type Verdict,
 } from '../game/engine'
 import { getProgress, recordResult } from '../lib/progress'
 import ConceptExplanation from '../components/ConceptExplanation'
+import LessonVisual from '../components/LessonVisual'
 
 declare global {
   interface Window {
@@ -45,6 +46,7 @@ export default function Play({ mod, mode, initialItemId }: Props) {
   const [selId, setSelId] = useState<string | null>(
     initialItemId && mod.items.some(item => item.id === initialItemId) ? initialItemId : null,
   )
+  const [showLabels, setShowLabels] = useState(false)
 
   // "zoom in" nudge when the current target is hidden behind a zoom threshold
   const [zoomHint, setZoomHint] = useState(false)
@@ -71,7 +73,7 @@ export default function Play({ mod, mode, initialItemId }: Props) {
     let p: Prompt | null = null
     if (mode === 'review') {
       const item = reviewQueue[n - 1]
-      p = item ? { item, kind: 'name', text: item.name } : null
+      p = item ? makePrompt(item) : null
     } else {
       p = pickPrompt(mod, getProgress, lastIdRef.current)
     }
@@ -197,28 +199,47 @@ export default function Play({ mod, mode, initialItemId }: Props) {
     return (
       <div className="play">
         <TopBar mod={mod} label="Explore" right="" />
-        <ConceptMap
-          mod={mod}
-          marks={exploreMarks}
-          showAtomLabels
-          interactive
-          onTap={(_world, resolved) => setSelId(resolved?.id ?? null)}
-        />
-        <div className="panel" data-testid="explore-card">
-          {sel ? (
-            <>
-              <div className="panel-head">
-                <span className={`kind-badge ${sel.kind}`}>{sel.kind === 'container' ? 'region' : 'component'}</span>
-                <h3>{sel.name}</h3>
+        <div className="concept-workspace explore-workspace">
+          <div className="visual-column">
+            <ConceptMap
+              mod={mod}
+              marks={exploreMarks}
+              showAtomLabels={showLabels}
+              showContainerLabels
+              hideArtText={!showLabels}
+              focusId={sel?.id ?? null}
+              isolateFocus={Boolean(sel)}
+              interactive
+              onTap={(_world, resolved) => setSelId(resolved?.id ?? null)}
+            />
+            <div className="map-tools" aria-label="Map display controls">
+              {sel ? (
+                <button onClick={() => setSelId(null)}>← Whole map</button>
+              ) : (
+                <button aria-pressed={showLabels} onClick={() => setShowLabels(value => !value)}>
+                  {showLabels ? 'Hide details' : 'Show all details'}
+                </button>
+              )}
+            </div>
+          </div>
+          <aside className="panel side-panel" data-testid="explore-card">
+            {sel ? (
+              <>
+                <div className="panel-head">
+                  <span className={`kind-badge ${sel.kind}`}>{sel.kind === 'container' ? 'region' : 'component'}</span>
+                  <h3>{sel.name}</h3>
+                </div>
+                <ConceptExplanation item={sel} />
+              </>
+            ) : (
+              <div className="empty-inspector">
+                <span className="eyebrow">Explore the system</span>
+                <h3>Tap a region or dot</h3>
+                <p>We’ll isolate that part, enlarge it, and explain the mechanism without the rest of the map competing for attention.</p>
+                <small>Pinch or scroll to zoom · ⛶ resets the view</small>
               </div>
-              <ConceptExplanation item={sel} />
-            </>
-          ) : (
-            <p className="note">
-              Tap any component to see what it does. Pinch or scroll to zoom — smaller parts
-              appear as you get closer. ⛶ resets the view.
-            </p>
-          )}
+            )}
+          </aside>
         </div>
       </div>
     )
@@ -231,28 +252,28 @@ export default function Play({ mod, mode, initialItemId }: Props) {
     return (
       <div className="play">
         <TopBar mod={mod} label="Learn" right={`${tourIdx + 1} / ${tour.length}`} />
-        <ConceptMap
-          mod={mod} marks={marks} showAtomLabels interactive={false} focusId={focusId}
-        />
         {cur && (
-          <div className="panel" data-testid="learn-card">
-            <div className="panel-head">
-              <span className={`kind-badge ${cur.kind}`}>{cur.kind === 'container' ? 'region' : 'concept'}</span>
-              <h3>{cur.name}</h3>
-            </div>
-            <ConceptExplanation item={cur} />
-            <div className="panel-actions">
-              <button className="ghost-btn" disabled={tourIdx === 0} onClick={() => setTourIdx(i => i - 1)}>
-                ← Back
-              </button>
-              {isLast ? (
-                <a className="primary-btn" href={`#/m/${mod.id}/drill`}>Start drill →</a>
-              ) : (
-                <button className="primary-btn" data-testid="learn-next" onClick={() => setTourIdx(i => i + 1)}>
-                  Next →
+          <div className="concept-workspace lesson-workspace">
+            <LessonVisual mod={mod} item={cur} marks={marks} focusId={focusId} />
+            <aside className="panel side-panel lesson-panel" data-testid="learn-card">
+              <div className="panel-head">
+                <span className={`kind-badge ${cur.kind}`}>{cur.kind === 'container' ? 'region' : 'concept'}</span>
+                <h3>{cur.name}</h3>
+              </div>
+              <ConceptExplanation item={cur} />
+              <div className="panel-actions">
+                <button className="ghost-btn" disabled={tourIdx === 0} onClick={() => setTourIdx(i => i - 1)}>
+                  ← Back
                 </button>
-              )}
-            </div>
+                {isLast ? (
+                  <a className="primary-btn" href={`#/m/${mod.id}/drill`}>Start drill →</a>
+                ) : (
+                  <button className="primary-btn" data-testid="learn-next" onClick={() => setTourIdx(i => i + 1)}>
+                    Next →
+                  </button>
+                )}
+              </div>
+            </aside>
           </div>
         )}
       </div>
@@ -313,7 +334,7 @@ export default function Play({ mod, mode, initialItemId }: Props) {
       />
       <div className="hud">
         <div className="hud-prompt" data-testid="prompt">
-          {prompt ? (prompt.kind === 'role' ? prompt.text : <>Tap: <strong>{prompt.text}</strong></>) : '…'}
+          {prompt ? <><span>Which part does this?</span><strong>{prompt.text}</strong></> : '…'}
         </div>
         <div className="hud-score">
           <span data-testid="score">{score}</span>
@@ -325,6 +346,8 @@ export default function Play({ mod, mode, initialItemId }: Props) {
           mod={mod}
           marks={marks}
           showAtomLabels={false}
+          showContainerLabels={false}
+          hideArtText={!verdict}
           prefer={prompt?.item.kind}
           focusId={focusId}
           resetSignal={qNum}

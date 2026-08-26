@@ -63,7 +63,7 @@ export const CONCEPT_GUIDES: Record<string, ConceptGuide> = {
     prompt: 'It shows “is” pulling context from “France” and “capital.” Real models repeat this with many heads across many layers, so no single line explains the answer.',
   },
   'tp.ffn': {
-    plain: 'FFN stands for feed-forward network. It is a per-token pattern transformation: each position privately rewrites its own current bundle of numbers.',
+    plain: 'FFN stands for feed-forward network: the numbers move through a fixed expand → gate → compress sequence, with no loop inside the stage. The same learned recipe is applied independently to every token position.',
     prompt: 'After attention has brought “France” and “capital” into the state at “is,” the FFN transforms that combined state. Across many layers, updates like this can strengthen patterns compatible with a city name coming next.',
     steps: ['Start with one token’s context-rich vector.', 'Expand it into many more feature slots.', 'Strengthen, weaken, or gate feature combinations.', 'Compress the result into one update.', 'Add that update back to the token’s running state.'],
     caution: 'The FFN does not open a “France → Paris” record. Knowledge is distributed across many weights, layers, attention steps, and FFN transformations.',
@@ -92,7 +92,7 @@ export const CONCEPT_GUIDES: Record<string, ConceptGuide> = {
     prompt: 'The new “ Paris” position can look back across “The capital of France is” without recreating all of those earlier keys and values.',
   },
   'tp.ffn2': {
-    plain: 'The same per-token FFN transformation runs again for the newest position in every layer.',
+    plain: 'The newest position runs through the same learned expand → gate → compress recipe. Earlier tokens do not participate here; their useful information is already carried inside this position’s vector.',
     prompt: 'For “ Paris,” it refines the current state before the model decides what should follow—perhaps punctuation or the start of an explanation.',
   },
   'tp.logits': {
@@ -168,7 +168,7 @@ export const CONCEPT_GUIDES: Record<string, ConceptGuide> = {
     prompt: 'All the heads’ findings about “is” are compressed into one update and added to that position’s representation.',
   },
   'tf.ffn': {
-    plain: 'FFN means feed-forward network. It is the private transformation half of a block: no tokens communicate here; the same small network rewrites each position separately.',
+    plain: 'FFN means feed-forward network: numbers move through a fixed expand → gate → compress sequence, with no loop inside this stage. It is the block’s private-analysis half—the same learned recipe rewrites each token position separately, after attention has supplied context.',
     prompt: 'Attention first makes the “is” vector aware of “capital” and “France.” The FFN then tests and combines patterns in that context-rich vector, producing an update that can make a city-name continuation more plausible after many layers.',
     steps: ['Receive the current vector for “is.”', 'Project it into a wider temporary workspace.', 'Use a nonlinear gate so combinations can matter, not just sums.', 'Project the result back to the model width.', 'Add the update to the residual stream.'],
     caution: 'Calling the FFN “memory” is only a loose metaphor. The model does not retrieve a single stored France fact; the answer emerges from distributed computation across the network.',

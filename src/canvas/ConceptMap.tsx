@@ -8,6 +8,12 @@ interface Props {
   marks: Record<string, Mark>
   /** show every atom's label (learn mode); marked atoms are always labeled */
   showAtomLabels: boolean
+  /** region names are suppressed while a clue-based assessment is active */
+  showContainerLabels?: boolean
+  /** hide authored annotation text so a diagram cannot reveal a quiz answer */
+  hideArtText?: boolean
+  /** show only the focused concept and the minimum structural context around it */
+  isolateFocus?: boolean
   /** hit-resolution hint from the current prompt */
   prefer?: ItemKind
   /** item to animate the camera toward */
@@ -38,6 +44,8 @@ declare global {
     __cmRelK?: number
     /** input diagnostics for the smoke harness */
     __cmTaps?: { downs: number; ups: number; taps: number; last: string }
+    /** true when every authored answer label is suppressed for an assessment */
+    __cmQuizMasked?: boolean
     /** deterministic camera control for tests: center on a world point at relK */
     __cmFocusWorld?: (x: number, y: number, relK: number) => void
   }
@@ -432,7 +440,13 @@ export default function ConceptMap(props: Props) {
     }
 
     function drawFrame(now: number) {
-      const { mod, marks, showAtomLabels } = propsRef.current
+      const {
+        mod, marks, showAtomLabels,
+        showContainerLabels = true,
+        hideArtText = false,
+        isolateFocus = false,
+      } = propsRef.current
+      window.__cmQuizMasked = Boolean(hideArtText && !showContainerLabels && !showAtomLabels)
       const dpr = window.devicePixelRatio || 1
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx!.clearRect(0, 0, cssW, cssH)
@@ -440,8 +454,13 @@ export default function ConceptMap(props: Props) {
       const relK = k / fitCam().k
       window.__cmRelK = relK
 
+      const focused = isolateFocus && propsRef.current.focusId
+        ? mod.items.find(item => item.id === propsRef.current.focusId) ?? null
+        : null
+      const focusParentId = focused?.kind === 'atom' ? focused.parent : undefined
+
       // faint world grid for spatial texture
-      ctx!.strokeStyle = 'rgba(148,163,184,0.07)'
+      ctx!.strokeStyle = isolateFocus ? 'rgba(148,163,184,0.035)' : 'rgba(148,163,184,0.07)'
       ctx!.lineWidth = 1
       for (let gx = 0; gx <= mod.world.w; gx += 100) {
         const [sx0, sy0] = project(gx, 0)
@@ -456,12 +475,21 @@ export default function ConceptMap(props: Props) {
 
       const pulse = 0.5 + 0.5 * Math.sin(now / 220)
 
-      // module backdrop illustration (leader lines, annotations)
-      for (const s of mod.art ?? []) drawShape(s, relK)
+      // A focused lesson is a clean slate: only the selected item's own art
+      // and its immediate structural context remain.
+      if (!isolateFocus) {
+        for (const s of mod.art ?? []) {
+          if (!(hideArtText && s.t === 'text')) drawShape(s, relK)
+        }
+      }
 
       // containers first
       for (const it of mod.items) {
         if (it.kind !== 'container') continue
+        const focusContainer = focused?.kind === 'container' && focused.id === it.id
+        const parentContext = focused?.kind === 'atom' && focusParentId === it.id
+        if (isolateFocus && focused && !focusContainer && !parentContext) continue
+        ctx!.globalAlpha = parentContext ? 0.34 : 1
         const { h, s } = hueOf(it)
         const r = containerRect(it)
         const [sx, sy] = project(r.x, r.y)
@@ -483,29 +511,44 @@ export default function ConceptMap(props: Props) {
           : `hsla(${h},${s}%,65%,0.45)`
         ctx!.stroke()
         // the item's own illustration, on top of its region fill
-        for (const shape of it.art ?? []) drawShape(shape, relK)
+        for (const shape of it.art ?? []) {
+          if (!(hideArtText && shape.t === 'text')) drawShape(shape, relK)
+        }
         // region label, always visible, top-left inside
-        ctx!.font = '600 12px system-ui, sans-serif'
-        ctx!.textAlign = 'left'
-        ctx!.textBaseline = 'top'
-        ctx!.fillStyle = `hsla(${h},${s}%,78%,0.95)`
-        ctx!.fillText(it.name.toUpperCase(), sx + 10, sy + 8, Math.max(40, sw - 20))
+        if (showContainerLabels || marks[it.id] || isolateFocus) {
+          ctx!.font = `${focusContainer ? 750 : 650} ${focusContainer ? 15 : 13}px system-ui, sans-serif`
+          ctx!.textAlign = 'left'
+          ctx!.textBaseline = 'top'
+          ctx!.fillStyle = `hsla(${h},${s}%,82%,0.98)`
+          ctx!.fillText(it.name.toUpperCase(), sx + 12, sy + 10, Math.max(40, sw - 24))
+        }
+        ctx!.globalAlpha = 1
       }
 
       // animated flows ride above the artwork, below the atoms
-      drawFlows(now)
+      if (!isolateFocus) drawFlows(now)
 
       // atoms on top; marked atoms drawn last; LOD-hidden atoms not at all
       const atoms = mod.items.filter(
-        i => i.kind === 'atom' && (i.lod === undefined || relK >= i.lod),
+        i => i.kind === 'atom'
+          && (i.lod === undefined || relK >= i.lod)
+          && (!focused
+            || i.id === focused.id
+            || (focused.kind === 'container' && i.parent === focused.id)
+            || (focused.kind === 'atom' && focusParentId !== undefined && i.parent === focusParentId)),
       )
       atoms.sort((a, b) => (marks[a.id] ? 1 : 0) - (marks[b.id] ? 1 : 0))
       for (const it of atoms) {
+        const childContext = focused?.kind === 'container' && it.parent === focused.id
+        const siblingContext = focused?.kind === 'atom' && it.id !== focused.id && it.parent === focusParentId
+        ctx!.globalAlpha = childContext ? 0.78 : siblingContext ? 0.16 : 1
         const { h, s } = hueOf(it)
         const [sx, sy] = project(it.x, it.y)
         const mark = marks[it.id]
         const R = 7
-        for (const shape of it.art ?? []) drawShape(shape, relK)
+        for (const shape of it.art ?? []) {
+          if (!(hideArtText && shape.t === 'text')) drawShape(shape, relK)
+        }
         // hitR atoms get rings sized to their artwork, not their dot
         const ringBase = Math.max(R, (it.hitR ?? 0) * k * 0.8)
         if (mark === 'focus') {
@@ -534,8 +577,8 @@ export default function ConceptMap(props: Props) {
         ctx!.stroke()
 
         // labels sit beside the dot, never on top of it; authors may offset
-        if (showAtomLabels || mark) {
-          ctx!.font = '500 12px system-ui, sans-serif'
+        if ((showAtomLabels && !childContext) || mark || (focused?.id === it.id) || childContext) {
+          ctx!.font = `${focused?.id === it.id ? 700 : 550} ${focused?.id === it.id ? 15 : 13}px system-ui, sans-serif`
           ctx!.textAlign = it.lalign === 'right' ? 'right' : 'left'
           ctx!.textBaseline = 'middle'
           const label = it.name
@@ -547,6 +590,7 @@ export default function ConceptMap(props: Props) {
           ctx!.fillStyle = mark ? '#f8fafc' : 'rgba(226,232,240,0.92)'
           ctx!.fillText(label, lx, ly)
         }
+        ctx!.globalAlpha = 1
       }
     }
 
@@ -606,13 +650,14 @@ export default function ConceptMap(props: Props) {
       delete window.__cmFocusWorld
       delete window.__cmModule
       delete window.__cmRelK
+      delete window.__cmQuizMasked
       window.__cmAnimating = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.mod.id])
 
   return (
-    <div className="map-wrap">
+    <div className={`map-wrap ${props.isolateFocus ? 'isolate-focus' : ''}`}>
       <canvas ref={canvasRef} className="map-canvas" data-testid="concept-map" />
       <button
         className="fit-btn"

@@ -109,6 +109,9 @@ export const memory: ModuleDef = {
   tagline: 'The physical staircase: from six transistors on the die, down through HBM towers, to sticks on a server board.',
   world: { w: 1000, h: 620 },
   art: [
+    // a simple investor mental model: every step buys capacity by giving up speed
+    { t: 'text', x: 45, y: 42, text: 'FAST + SMALL', size: 11, f: amber(0.82), lodMax: 2.5 },
+    { t: 'text', x: 865, y: 575, text: 'LARGE + SLOW', size: 11, f: amber(0.62), lodMax: 2.5 },
     // the staircase drawn literally, with real bandwidth at each step
     { t: 'line', pts: [40, 284, 362, 284, 362, 404, 602, 404, 602, 594, 985, 594], s: slate(0.35), lw: 2.5 },
     { t: 'text', x: 55, y: 298, text: 'on-die: tens of TB/s · megabytes', size: 8.5, f: amber(0.7) },
@@ -117,6 +120,8 @@ export const memory: ModuleDef = {
     // spill path from the package down to the board
     { t: 'line', pts: [585, 355, 660, 390], s: sky(0.3), lw: 1.1, dash: [4, 4] },
     // the roofline, drawn for real
+    { t: 'rect', x: 90, y: 382, w: 330, h: 112, r: 8, f: 'rgba(15,23,42,0.28)', s: slate(0.2), lw: 1 },
+    { t: 'text', x: 104, y: 396, text: 'THE TWO PERFORMANCE QUESTIONS', size: 8.5, f: sky(0.72), lodMax: 2.5 },
     { t: 'line', pts: [118, 472, 232, 472], s: slate(0.4), lw: 1 },
     { t: 'line', pts: [118, 408, 118, 472], s: slate(0.4), lw: 1 },
     { t: 'line', pts: [122, 466, 178, 424], s: amber(0.7), lw: 1.5 },

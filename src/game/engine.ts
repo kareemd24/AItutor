@@ -2,6 +2,7 @@
 // No DOM, no React, no renderer imports — this file must stay portable.
 
 import type { Item, ModuleDef } from '../types'
+import { quizClueFor } from '../data/quiz'
 
 export interface ItemProgress {
   attempts: number
@@ -41,15 +42,16 @@ export function buildLearnTour(mod: ModuleDef): Item[] {
 
 export interface Prompt {
   item: Item
-  kind: 'name' | 'role'
+  kind: 'clue'
   text: string
 }
 
-function makePrompt(item: Item, rand: () => number): Prompt {
-  if (item.role && rand() < 0.35) {
-    return { item, kind: 'role', text: `Find the one that ${item.role}` }
+export function makePrompt(item: Item): Prompt {
+  return {
+    item,
+    kind: 'clue',
+    text: quizClueFor(item.id) ?? (item.role ? `Find the part that ${item.role}.` : item.note),
   }
-  return { item, kind: 'name', text: item.name }
 }
 
 /**
@@ -74,9 +76,9 @@ export function pickPrompt(
   let r = rand() * total
   for (let i = 0; i < pool.length; i++) {
     r -= weights[i]
-    if (r <= 0) return makePrompt(pool[i], rand)
+    if (r <= 0) return makePrompt(pool[i])
   }
-  return makePrompt(pool[pool.length - 1], rand)
+  return makePrompt(pool[pool.length - 1])
 }
 
 /** Items due for spaced review, most overdue first. Unseen items are not due. */

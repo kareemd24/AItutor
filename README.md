@@ -7,10 +7,16 @@ for hand-designed concept layouts, everything downstream kept.
 
 The investor edition adds a plain-language thesis, diligence question, key
 metrics, generation-specific caveats, and primary sources to every module.
-Every one of the 168 tappable concepts now answers four questions in order:
-**What does the term mean? What is happening? How does it connect to the worked
-prompt? Why does it matter?** A global concept finder jumps directly to any term
-on its map.
+Every one of the 168 tappable concepts now answers five questions in order:
+**What does the term mean? Why does it exist? What is actually happening? How
+does it connect to the worked prompt? Why does it matter?** Each one also has a
+carefully labeled analogy so a non-technical reader has something concrete to
+remember. A global concept finder jumps directly to any term on its map.
+
+Lessons use a focused split-screen workspace: one isolated visual or analogy on
+the left, and a large, scrollable explanation on the right. Original office and
+kitchen illustrations make the transformer and inference stories reconstructable
+without turning the diagrams into walls of labels.
 
 ## The modules
 
@@ -45,12 +51,14 @@ coolant loops, token streams).
 Five modes over the same items:
 
 - **Learn** — guided tour, no score. Region by region, with a plain-English
-  definition, mechanism, worked-prompt connection, misconception check where
-  useful, and investor takeaway.
-- **Explore** — free roam: tap any component to see what it does, zoom in for
-  the fine detail.
+  definition, causal “why,” analogy, step sequence, worked-prompt connection,
+  misconception check where useful, and investor takeaway.
+- **Explore** — a clean, label-light system view. Tap any component and the map
+  isolates it beside the full teaching card; reveal all authored details only
+  when you want them.
 - **Drill** — the game. Timed prompts weighted toward what you know least,
-  including "find the one that…" role questions.
+  using clue-only questions. Region titles, component labels, and diagram text
+  are hidden until the answer so the map cannot give the term away.
 - **Sprint** — one 60-second clock, endless prompts, for fluency.
 - **Review** — Leitner spaced repetition; only what you're due to forget.
 
@@ -63,6 +71,7 @@ moment. Progress lives in `localStorage` only.
 ```bash
 npm install
 npm run dev      # local dev server
+npm run audit    # verifies all 168 teaching layers and answer-safe clues
 npm run build    # typecheck + production build
 npm run smoke    # drives a real browser through the whole product
 ```

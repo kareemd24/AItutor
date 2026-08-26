@@ -72,6 +72,11 @@ const postArt: Shape[] = [
 
 // ---- distributed: the same gradient, everywhere --------------------------
 const distArt: Shape[] = [
+  // one global step assembled from several ways of splitting the work
+  { t: 'line', pts: [170, 510, 244, 510], s: sky(0.35), lw: 1.6 },
+  { t: 'line', pts: [294, 510, 356, 510], s: sky(0.35), lw: 1.6 },
+  { t: 'line', pts: [430, 510, 490, 510, 490, 560, 835, 560, 835, 520], s: amber(0.3), lw: 1.5, dash: [6, 5] },
+  { t: 'text', x: 500, y: 440, text: 'SPLIT THE WORK · RECOMBINE ONE UPDATE', size: 10, f: amber(0.72), align: 'center', lodMax: 2.5 },
   ...Array.from({ length: 3 }, (_, i): Shape => (
     { t: 'rect', x: 126 + i * 18, y: 500, w: 14, h: 20, r: 2, f: sky(0.35), s: sky(0.5), lw: 0.8, lod: 1.25 }
   )),

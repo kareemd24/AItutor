@@ -192,6 +192,16 @@ async function run() {
     // ---- 4. full drill: correct taps, plus one deliberate miss -----------
     await page.click('a[href="#/m/transformer/drill"]')
     await page.waitForSelector('[data-testid="prompt"]')
+    await page.waitForFunction(() => window.__cmQuizMasked === true)
+    const firstQuestion = await page.evaluate(() => ({
+      clue: document.querySelector('[data-testid="prompt"]')?.textContent?.toLowerCase() ?? '',
+      answer: window.__cmTarget?.id ?? '',
+      masked: window.__cmQuizMasked,
+    }))
+    if (!firstQuestion.masked) fail('drill map exposed authored labels')
+    if (/\b(prefill|feed-forward|ffn)\b/.test(firstQuestion.clue) && /prefill|ffn/.test(firstQuestion.answer)) {
+      fail(`drill clue leaked its answer: ${firstQuestion.clue}`)
+    }
     let missDone = false
     for (let q = 0; q < 30; q++) {
       if (await page.locator('[data-testid="results"]').count() > 0) break
@@ -252,6 +262,10 @@ async function run() {
     await tapWorld(page, 240, 65) // top-of-rack switches
     let card = await page.textContent('[data-testid="explore-card"]')
     if (!card.includes('Top-of-rack')) fail(`explore tap on ToR switch showed: ${card.slice(0, 60)}`)
+    // focused Explore deliberately hides everything else; return to the map
+    // before selecting a concept in another region.
+    await page.getByRole('button', { name: '← Whole map' }).click()
+    await settle(page)
     // at fit zoom the GPU die is LOD-hidden: tapping its spot must select the module, not the die
     await tapWorld(page, 635, 444)
     card = await page.textContent('[data-testid="explore-card"]')
@@ -311,6 +325,12 @@ async function run() {
     await pp.goto(base, { waitUntil: 'networkidle' })
     await checkOverflow(pp, 'home@390')
     await shot(pp, 'phone-home')
+    await pp.goto(`${base}#/m/transformer/learn`, { waitUntil: 'networkidle' })
+    await pp.waitForSelector('[data-testid="learn-card"]')
+    for (let i = 0; i < 10; i++) await pp.locator('[data-testid="learn-next"]').click()
+    await pp.waitForTimeout(120)
+    await checkOverflow(pp, 'ffn-learn@390')
+    await shot(pp, 'phone-ffn-learn')
     await pp.goto(`${base}#/m/silicon/drill`)
     await pp.reload({ waitUntil: 'networkidle' })
     await pp.waitForSelector('[data-testid="prompt"]')

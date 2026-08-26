@@ -15,6 +15,12 @@ export const transformer: ModuleDef = {
   tagline: 'Every part a token touches on its way from text to next-token prediction.',
   world: { w: 1000, h: 620 },
   art: [
+    // the block is a two-part loop: communicate, then transform privately
+    { t: 'line', pts: [245, 310, 292, 310, 292, 200, 304, 200], s: violet(0.45), lw: 2 },
+    { t: 'line', pts: [548, 200, 585, 200], s: amber(0.45), lw: 2 },
+    { t: 'line', pts: [810, 200, 846, 200, 846, 310, 862, 310], s: amber(0.45), lw: 2 },
+    { t: 'text', x: 314, y: 78, text: '1 · TOKENS SHARE CONTEXT', size: 10, f: violet(0.72), lodMax: 2.5 },
+    { t: 'text', x: 598, y: 78, text: '2 · EACH TOKEN TRANSFORMS IT', size: 10, f: amber(0.72), lodMax: 2.5 },
     // the residual stream drawn as an actual highway with add-junctions
     { t: 'line', pts: [255, 450, 845, 450], s: slate(0.35), lw: 3 },
     { t: 'line', pts: [420, 355, 420, 438], s: violet(0.5), lw: 1.5, dash: [5, 4] },
@@ -49,6 +55,10 @@ export const transformer: ModuleDef = {
     {
       id: 'tf.attn', name: 'Attention', kind: 'container', zone: 'Attention',
       x: 420, y: 200, w: 260, h: 300,
+      art: [
+        { t: 'line', pts: [350, 120, 470, 100, 520, 180, 490, 285], s: violet(0.28), lw: 1.6 },
+        { t: 'line', pts: [355, 250, 470, 100], s: violet(0.22), lw: 1.2, dash: [5, 5] },
+      ],
       note: 'The block where tokens look at each other — the only place information moves between positions.',
     },
     { id: 'tf.qkv', name: 'Q / K / V projections', kind: 'atom', parent: 'tf.attn', zone: 'Attention', x: 350, y: 120,
@@ -66,6 +76,10 @@ export const transformer: ModuleDef = {
     {
       id: 'tf.ffn', name: 'Per-token transformation (FFN)', kind: 'container', zone: 'Feed-forward',
       x: 700, y: 195, w: 220, h: 290,
+      art: [
+        { t: 'line', pts: [640, 130, 700, 210, 762, 130], s: amber(0.32), lw: 1.8 },
+        { t: 'line', pts: [700, 210, 700, 300], s: amber(0.2), lw: 1.2, dash: [5, 5] },
+      ],
       note: 'Every position goes through the same private transformation. The layer first expands the vector, uses a nonlinear gate to reshape combinations, compresses the result, and adds that update back to the position’s running state.',
     },
     { id: 'tf.up', name: 'Up projection', kind: 'atom', parent: 'tf.ffn', zone: 'Feed-forward', x: 640, y: 130,

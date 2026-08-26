@@ -1,6 +1,7 @@
 import type { Item } from '../types'
 import { conceptGuideFor } from '../data/beginner'
 import { investorNoteFor } from '../data/guides'
+import { teachingLensFor } from '../data/teaching'
 
 interface Props {
   item: Item
@@ -17,6 +18,7 @@ export default function ConceptExplanation({
 }: Props) {
   const investorNote = showInvestor ? investorNoteFor(item.id) : undefined
   const guide = conceptGuideFor(item.id)
+  const teaching = teachingLensFor(item.id)
 
   if (!guide) {
     return (
@@ -33,6 +35,20 @@ export default function ConceptExplanation({
         <span>Plain English</span>
         <p>{guide.plain}</p>
       </section>
+
+      {teaching && (
+        <div className="concept-causal-grid">
+          <section className="why-card">
+            <span>Why it exists</span>
+            <p>{teaching.why}</p>
+          </section>
+          <section className="analogy-card">
+            <span>Think of it like</span>
+            <p>{teaching.analogy}</p>
+            <small>Analogy, not literal mechanism</small>
+          </section>
+        </div>
+      )}
 
       {guide.steps && (
         <ol className="concept-steps" aria-label="What happens step by step">

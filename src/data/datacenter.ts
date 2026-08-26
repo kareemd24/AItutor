@@ -13,6 +13,16 @@ export const datacenter: ModuleDef = {
   tagline: 'How ten thousand GPUs become one computer — copper up close, light everywhere else.',
   world: { w: 1000, h: 620 },
   art: [
+    // scale-up stays inside the server; scale-out crosses the rack boundary
+    { t: 'line', pts: [120, 115, 200, 170, 280, 115, 200, 170, 120, 250, 200, 170, 280, 250], s: sky(0.28), lw: 1.7 },
+    { t: 'circle', cx: 200, cy: 170, r: 12, f: 'rgba(56,189,248,0.12)', s: sky(0.5), lw: 1.4 },
+    { t: 'line', pts: [280, 250, 370, 250, 420, 205, 540, 205], s: amber(0.38), lw: 2, dash: [7, 5] },
+    { t: 'text', x: 320, y: 286, text: 'NIC IS THE ON-RAMP', size: 9, f: amber(0.72), lodMax: 2.5 },
+    // fabric links: endpoints feed a shared leaf-spine middle
+    { t: 'line', pts: [480, 100, 660, 150, 845, 100], s: sky(0.27), lw: 1.5 },
+    { t: 'line', pts: [600, 100, 660, 150, 725, 100], s: sky(0.27), lw: 1.5 },
+    { t: 'line', pts: [540, 205, 660, 150, 760, 205], s: amber(0.25), lw: 1.5, dash: [5, 5] },
+    { t: 'text', x: 660, y: 275, text: 'MANY PATHS · ONE DISTRIBUTED COMPUTER', size: 10, f: sky(0.7), align: 'center', lodMax: 2.5 },
     // the transceiver drawn as a module: electrical in, light in the middle
     { t: 'rect', x: 240, y: 392, w: 640, h: 46, r: 6, s: slate(0.35), lw: 1.2 },
     { t: 'line', pts: [310, 415, 388, 415], s: sky(0.5), lw: 1.3 },
