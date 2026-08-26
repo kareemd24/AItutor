@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ConceptMap, { type Mark } from '../canvas/ConceptMap'
 import ConceptExplanation from '../components/ConceptExplanation'
 import LessonVisual from '../components/LessonVisual'
 import { getModule } from '../data'
 import { TOUR } from '../data/tour'
+import { savedVisualMode, saveVisualMode, type VisualMode } from '../lib/visualMode'
 
 // The Grand Tour: a guided narrative that follows one request across four
 // modules. Each step focuses one place on one map; crossing a module
@@ -11,6 +12,12 @@ import { TOUR } from '../data/tour'
 
 export default function Tour() {
   const [idx, setIdx] = useState(0)
+  const workspaceRef = useRef<HTMLDivElement>(null)
+  const [visualMode, setVisualModeState] = useState<VisualMode>(savedVisualMode)
+  const setVisualMode = (next: VisualMode) => { setVisualModeState(next); saveVisualMode(next) }
+  useEffect(() => {
+    workspaceRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [idx])
   const step = TOUR[idx]
   const mod = getModule(step.module)!
   const item = step.item ? mod.items.find(candidate => candidate.id === step.item) : undefined
@@ -27,9 +34,9 @@ export default function Tour() {
         </div>
         <div className="topbar-right">{idx + 1} / {TOUR.length}</div>
       </div>
-      <div className="concept-workspace lesson-workspace tour-workspace">
+      <div className="concept-workspace lesson-workspace tour-workspace" data-module={mod.id} ref={workspaceRef}>
         {item ? (
-          <LessonVisual key={`${mod.id}:${item.id}`} mod={mod} item={item} marks={marks} focusId={step.item ?? null} />
+          <LessonVisual key={`${mod.id}:${item.id}`} mod={mod} item={item} marks={marks} focusId={step.item ?? null} mode={visualMode} onModeChange={setVisualMode} />
         ) : (
           <div className="visual-column lesson-visual">
             <div className="visual-context"><span>{mod.title}</span><strong>{step.title}</strong></div>

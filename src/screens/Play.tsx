@@ -9,6 +9,7 @@ import {
 import { getProgress, recordResult } from '../lib/progress'
 import ConceptExplanation from '../components/ConceptExplanation'
 import LessonVisual from '../components/LessonVisual'
+import { savedVisualMode, saveVisualMode, type VisualMode } from '../lib/visualMode'
 
 declare global {
   interface Window {
@@ -41,6 +42,13 @@ export default function Play({ mod, mode, initialItemId }: Props) {
 
   // learn
   const [tourIdx, setTourIdx] = useState(0)
+  const lessonWorkspaceRef = useRef<HTMLDivElement>(null)
+  const [visualMode, setVisualModeState] = useState<VisualMode>(savedVisualMode)
+  const setVisualMode = (next: VisualMode) => { setVisualModeState(next); saveVisualMode(next) }
+
+  useEffect(() => {
+    lessonWorkspaceRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [tourIdx])
 
   // explore
   const [selId, setSelId] = useState<string | null>(
@@ -253,8 +261,8 @@ export default function Play({ mod, mode, initialItemId }: Props) {
       <div className="play">
         <TopBar mod={mod} label="Learn" right={`${tourIdx + 1} / ${tour.length}`} />
         {cur && (
-          <div className="concept-workspace lesson-workspace">
-            <LessonVisual mod={mod} item={cur} marks={marks} focusId={focusId} />
+          <div className="concept-workspace lesson-workspace" ref={lessonWorkspaceRef}>
+            <LessonVisual mod={mod} item={cur} marks={marks} focusId={focusId} mode={visualMode} onModeChange={setVisualMode} />
             <aside className="panel side-panel lesson-panel" data-testid="learn-card">
               <div className="panel-head">
                 <span className={`kind-badge ${cur.kind}`}>{cur.kind === 'container' ? 'region' : 'concept'}</span>

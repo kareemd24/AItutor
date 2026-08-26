@@ -13,10 +13,11 @@ does it connect to the worked prompt? Why does it matter?** Each one also has a
 carefully labeled analogy so a non-technical reader has something concrete to
 remember. A global concept finder jumps directly to any term on its map.
 
-Lessons use a focused split-screen workspace: one isolated visual or analogy on
-the left, and a large, scrollable explanation on the right. Original office and
-kitchen illustrations make the transformer and inference stories reconstructable
-without turning the diagrams into walls of labels.
+Lessons use a focused split-screen workspace: one concept-specific causal visual
+on the left, and a large, scrollable explanation on the right. All 168 steps own
+their own visual story—flow, loop, comparison, stack, network, or matrix—rather
+than reusing a decorative module panorama. The Analogy/Diagram choice persists
+as the learner advances or moves into the Grand Tour.
 
 ## The modules
 

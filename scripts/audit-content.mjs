@@ -45,7 +45,7 @@ function record(sf, variableName) {
 
 const filenames = await readdir(DATA)
 const moduleFiles = filenames.filter(name =>
-  name.endsWith('.ts') && !['beginner.ts', 'guides.ts', 'index.ts', 'quiz.ts', 'teaching.ts', 'tour.ts'].includes(name),
+  name.endsWith('.ts') && !['beginner.ts', 'guides.ts', 'index.ts', 'quiz.ts', 'teaching.ts', 'tour.ts', 'visuals.ts'].includes(name),
 )
 
 const items = []
@@ -69,9 +69,11 @@ for (const filename of moduleFiles) {
 const beginnerSf = source(await readFile(path.join(DATA, 'beginner.ts'), 'utf8'), 'beginner.ts')
 const teachingSf = source(await readFile(path.join(DATA, 'teaching.ts'), 'utf8'), 'teaching.ts')
 const quizSf = source(await readFile(path.join(DATA, 'quiz.ts'), 'utf8'), 'quiz.ts')
+const visualsSf = source(await readFile(path.join(DATA, 'visuals.ts'), 'utf8'), 'visuals.ts')
 const guides = record(beginnerSf, 'CONCEPT_GUIDES')
 const lenses = record(teachingSf, 'TEACHING_LENSES')
 const clues = record(quizSf, 'QUIZ_CLUES')
+const visuals = record(visualsSf, 'VISUAL_STORIES')
 
 const failures = []
 const ids = new Set(items.map(item => item.id))
@@ -80,6 +82,7 @@ if (items.length !== 168 || ids.size !== 168) failures.push(`expected 168 unique
 for (const item of items) {
   if (!guides.has(item.id)) failures.push(`${item.id}: missing plain-language guide`)
   if (!lenses.has(item.id)) failures.push(`${item.id}: missing why/analogy lens`)
+  if (!visuals.has(item.id)) failures.push(`${item.id}: missing concept-specific visual story`)
   const clue = clues.get(item.id)
   if (!clue) {
     failures.push(`${item.id}: missing clue-only assessment prompt`)
@@ -102,7 +105,7 @@ for (const item of items) {
   }
 }
 
-for (const [label, map] of [['guide', guides], ['lens', lenses], ['clue', clues]]) {
+for (const [label, map] of [['guide', guides], ['lens', lenses], ['clue', clues], ['visual', visuals]]) {
   for (const id of map.keys()) if (!ids.has(id)) failures.push(`${id}: orphan ${label} entry`)
 }
 
@@ -112,4 +115,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log(`CONTENT AUDIT PASS — ${items.length} concepts have plain language, causal analogies, and answer-safe clues`)
+console.log(`CONTENT AUDIT PASS — ${items.length} concepts have plain language, causal analogies, unique visuals, and answer-safe clues`)

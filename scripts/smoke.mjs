@@ -178,15 +178,26 @@ async function run() {
     await page.reload({ waitUntil: 'networkidle' })
     await page.waitForSelector('[data-testid="learn-card"]')
     const seen = new Set()
+    const visualTitles = new Set()
     for (let i = 0; i < 60; i++) {
       const t = await currentTarget(page)
       seen.add(t.id)
+      const scene = page.locator('.concept-scene')
+      if (await scene.count() !== 1) fail(`learn step ${t.id} has no concept-specific visual`)
+      visualTitles.add(await scene.locator('figcaption strong').textContent())
+      if (i === 2) await page.getByRole('button', { name: 'Diagram' }).click()
       const next = page.locator('[data-testid="learn-next"]')
       if (await next.count() === 0) break
       await next.click()
       await page.waitForTimeout(60)
+      if (i === 2) {
+        const selected = await page.locator('.visual-toggle button.active').textContent()
+        if (selected !== 'Diagram') fail(`visual preference reset after Next: ${selected}`)
+        await page.getByRole('button', { name: 'Analogy' }).click()
+      }
     }
     if (seen.size !== 20) fail(`learn tour visited ${seen.size} items, expected 20`)
+    if (visualTitles.size !== 20) fail(`transformer reused visual stories: ${visualTitles.size} unique titles for 20 concepts`)
     await shot(page, 'learn-end')
 
     // ---- 4. full drill: correct taps, plus one deliberate miss -----------
@@ -302,7 +313,7 @@ async function run() {
     await page.waitForSelector('[data-testid="tour-card"]')
     const tourModules = new Set()
     for (let i = 0; i < 40; i++) {
-      tourModules.add(await page.evaluate(() => window.__cmModule))
+      tourModules.add(await page.getAttribute('.tour-workspace', 'data-module'))
       const next = page.locator('[data-testid="tour-next"]')
       if (await next.count() === 0) break
       await next.click()
@@ -329,6 +340,8 @@ async function run() {
     await pp.waitForSelector('[data-testid="learn-card"]')
     for (let i = 0; i < 10; i++) await pp.locator('[data-testid="learn-next"]').click()
     await pp.waitForTimeout(120)
+    const lessonScroll = await pp.locator('.lesson-workspace').evaluate(node => node.scrollTop)
+    if (lessonScroll !== 0) fail(`mobile lesson did not reset to its new visual: scrollTop=${lessonScroll}`)
     await checkOverflow(pp, 'ffn-learn@390')
     await shot(pp, 'phone-ffn-learn')
     await pp.goto(`${base}#/m/silicon/drill`)
