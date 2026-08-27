@@ -2,6 +2,8 @@ import type { Item } from '../types'
 import { conceptGuideFor } from '../data/beginner'
 import { investorNoteFor } from '../data/guides'
 import { teachingLensFor } from '../data/teaching'
+import { watchClipsFor } from '../data/watch'
+import WatchClips from './WatchClips'
 
 interface Props {
   item: Item
@@ -19,12 +21,14 @@ export default function ConceptExplanation({
   const investorNote = showInvestor ? investorNoteFor(item.id) : undefined
   const guide = conceptGuideFor(item.id)
   const teaching = teachingLensFor(item.id)
+  const clips = watchClipsFor(item.id)
 
   if (!guide) {
     return (
       <>
         <p className="note">{detailOverride ?? item.note}</p>
         {investorNote && <div className="investor-lens"><span>Investor lens</span><p>{investorNote}</p></div>}
+        <WatchClips clips={clips} />
       </>
     )
   }
@@ -73,6 +77,7 @@ export default function ConceptExplanation({
         <div className="concept-caution"><span>Do not picture it as</span><p>{guide.caution}</p></div>
       )}
       {investorNote && <div className="investor-lens"><span>Investor lens</span><p>{investorNote}</p></div>}
+      <WatchClips clips={clips} />
     </div>
   )
 }

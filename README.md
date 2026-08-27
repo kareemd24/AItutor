@@ -40,6 +40,12 @@ advances or moves into the Grand Tour.
 model, across a serving worker's timetable, into physical memory, and down to
 the rack. Worked values are explicitly marked as illustrative.
 
+**Watch layer**: the best free explainers — Karpathy's "Let's build GPT" and
+3Blue1Brown's attention and MLP chapters — are cut to exact chapter timestamps
+and attached to the concepts they teach (`src/data/watch.ts`). Clips appear in
+lesson panels and as "Watch first" picks on module pages; embeds load only on
+click, so the site makes no external requests until a learner presses play.
+
 ## The game
 
 Each module is a **designed 2D layout** where placement is curation — related

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { ModuleDef } from '../types'
 import { guideFor } from '../data/guides'
+import { moduleWatchFor } from '../data/watch'
+import WatchClips from '../components/WatchClips'
 import { moduleStats, resetItems } from '../lib/progress'
 
 const MODE_META = [
@@ -95,6 +97,16 @@ export default function ModuleSetup({ mod }: { mod: ModuleDef }) {
             ))}
           </div>
         </section>
+
+        {moduleWatchFor(mod.id).length > 0 && (
+          <section className="learning-section">
+            <div className="section-heading compact">
+              <p className="eyebrow">Watch first</p>
+              <h2>The best free explainers, cut to this map</h2>
+            </div>
+            <WatchClips clips={moduleWatchFor(mod.id)} heading="Curated video chapters" />
+          </section>
+        )}
 
         <section className="source-section">
           <div className="source-heading">
